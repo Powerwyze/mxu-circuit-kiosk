@@ -1,0 +1,8 @@
+node_modules/
+.vercel/
+_legacy/
+ole2026_live/
+.env
+.env.*
+*.log
+.DS_Store

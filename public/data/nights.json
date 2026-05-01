@@ -1,0 +1,42 @@
+[
+  {
+    "num": "01",
+    "day": "Wednesday",
+    "date": "April 29",
+    "title": "Investor Dinner",
+    "copy": "An intimate seated dinner for investors, brand partners, and key stakeholders. The circuit begins here.",
+    "image": "assets/mxu_dinner.png"
+  },
+  {
+    "num": "02",
+    "day": "Thursday",
+    "date": "April 30",
+    "title": "Founders Social",
+    "copy": "A high-energy networking social for capital allocators, founders, and operators in the MXU ecosystem.",
+    "image": "assets/mxu_social.png"
+  },
+  {
+    "num": "03",
+    "day": "Friday",
+    "date": "May 1",
+    "title": "Yacht Hospitality",
+    "copy": "Exclusive yacht experience on Miami's waters. Curated guest list. Premium hospitality. Sunset to skyline.",
+    "image": "assets/mxu_yacht.png"
+  },
+  {
+    "num": "04",
+    "day": "Saturday",
+    "date": "May 2",
+    "title": "Jet Hangar",
+    "copy": "MXU's flagship anchor event. Private aviation hangar, luxury cars, live performance, and Miami's most exclusive crowd.",
+    "image": "assets/mxu_hero_hangar.png"
+  },
+  {
+    "num": "05",
+    "day": "Sunday",
+    "date": "May 3",
+    "title": "Race Day Finale",
+    "copy": "Closing the circuit at the Grand Prix. Private viewing, champagne, and the loudest send-off Miami can offer.",
+    "image": "assets/mxu_raceday.png"
+  }
+]

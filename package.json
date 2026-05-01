@@ -1,0 +1,11 @@
+{
+  "name": "mxu-circuit-kiosk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MXU Circuit · F1 Miami AI kiosk",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "formidable": "^3.5.1",
+    "nodemailer": "^6.9.13"
+  }
+}

@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>MXU Circuit · F1 Miami Concierge</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23e10600'/%3E%3Ctext x='16' y='22' font-family='Impact,Arial' font-size='18' fill='%23fff' text-anchor='middle' font-weight='900'%3EM%3C/text%3E%3C/svg%3E" />
+</head>
+<body class="kiosk-portrait">
+
+  <!-- Backgrounds -->
+  <div class="bg" aria-hidden="true"></div>
+  <div class="bg__image" aria-hidden="true"></div>
+  <div class="bg__grad" aria-hidden="true"></div>
+  <div class="bg__grain" aria-hidden="true"></div>
+
+  <!-- Landscape rotate-warning (forces portrait) -->
+  <div class="rotate-warn" aria-hidden="true">
+    <div class="rotate-warn__icon">↻</div>
+    <div class="rotate-warn__title">Rotate to portrait</div>
+    <div class="rotate-warn__sub">This experience is portrait-only.</div>
+  </div>
+
+  <div class="app">
+
+    <!-- ===== Topbar ===== -->
+    <header class="topbar" role="banner">
+      <a href="#booth" data-tab="booth" class="brand" aria-label="MXU home">
+        <span class="brand__mark" aria-hidden="true">M</span>
+        <span class="brand__text">
+          <span class="brand__name">MXU · CIRCUIT</span>
+          <span class="brand__sub">F1 · MIAMI</span>
+        </span>
+      </a>
+      <div class="live" id="liveBadge" aria-live="polite">
+        <span class="live__dot"></span>
+        <span class="live__day" id="liveDay">F1 MIAMI</span>
+        <span class="live__time" id="liveTime">May 1–3</span>
+      </div>
+    </header>
+
+    <!-- ===== Tab bar ===== -->
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab is-active" role="tab" data-tab="booth" aria-selected="true">📸 Photo&nbsp;Booth</button>
+      <button class="tab" role="tab" data-tab="voice"   aria-selected="false">🎙️ Concierge</button>
+      <button class="tab" role="tab" data-tab="circuit" aria-selected="false">🏁 The&nbsp;Circuit</button>
+      <button class="tab" role="tab" data-tab="fastlap" aria-selected="false">⏱️ Fast&nbsp;Lap</button>
+      <button class="tab" role="tab" data-tab="discover" aria-selected="false">🌴 Discover</button>
+    </nav>
+
+    <!-- ===== Panels ===== -->
+    <main class="panels">
+
+      <!-- ░░ Photo Booth (LANDING) ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+      <section class="panel is-active" data-panel="booth" aria-hidden="false">
+        <div class="panel-eyebrow">MXU AI · F1 Miami</div>
+        <h1 class="panel-title">AI Photo Booth</h1>
+        <p class="panel-lede">Snap a portrait. We'll restyle you as an F1 driver in the MXU Jet Hangar — and email the souvenir to you.</p>
+
+        <div class="booth">
+          <div class="booth__cam-wrap">
+            <video class="booth__cam" id="boothCam" playsinline muted autoplay></video>
+            <img class="booth__cam" id="boothPreview" alt="" hidden />
+            <canvas id="boothCanvas" hidden></canvas>
+
+            <div class="booth__hud">
+              <span class="booth__hud-rec">REC · 4K</span>
+              <span class="booth__hud-rec" style="background:rgba(0,0,0,0.4);padding:.2rem .5rem">F1 · MIAMI</span>
+            </div>
+            <div class="booth__corners" aria-hidden="true"></div>
+            <div class="booth__countdown" id="boothCountdown">5</div>
+            <div class="booth__flash" id="boothFlash"></div>
+          </div>
+
+          <div class="booth__pill" id="boothEmailPill">📧</div>
+
+          <div class="booth__row">
+            <button class="btn btn--ghost"   id="boothStart"  type="button">Start Camera</button>
+            <button class="btn btn--ghost"   id="boothSwitch" type="button">Switch</button>
+            <button class="btn btn--primary btn--block" id="boothCapture" type="button">📸 Take Photo</button>
+            <button class="btn btn--ghost"   id="boothRetake" type="button" hidden>Retake</button>
+            <button class="btn btn--accent"  id="boothGenerate" type="button" hidden>✨ Generate F1 Portrait</button>
+          </div>
+
+          <div class="booth__loading" id="boothLoading">Generating your F1 portrait… (≈ 20 s)</div>
+          <div class="booth__err"     id="boothErr"></div>
+
+          <div class="booth__result" id="boothOut">
+            <img id="boothResult" alt="Generated F1 portrait" />
+            <button class="btn btn--primary btn--block" id="boothEmail" type="button">📩 Send to my email</button>
+            <div class="booth__email-status" id="boothEmailStatus"></div>
+          </div>
+
+          <div class="booth__how">
+            <h3>How it works</h3>
+            <ol>
+              <li>Tap <strong>Take Photo</strong> and enter your email</li>
+              <li>5-second countdown · capture portrait</li>
+              <li>Tap <strong>Generate</strong> · AI restyles you as an F1 driver</li>
+              <li>Tap <strong>Send to my email</strong> — souvenir delivered</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- ░░ Email modal (replaces prompt) ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+      <div class="modal" id="emailModal" aria-hidden="true" role="dialog" aria-labelledby="emailModalTitle">
+        <div class="modal__panel">
+          <div class="modal__title" id="emailModalTitle">Your email</div>
+          <div class="modal__sub">We'll send your F1 portrait here once it's ready.</div>
+          <input class="modal__input" id="emailModalInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
+          <div class="modal__err" id="emailModalErr"></div>
+          <div class="modal__row">
+            <button class="btn btn--ghost"   id="emailModalCancel" type="button">Cancel</button>
+            <button class="btn btn--primary" id="emailModalOk"     type="button">Continue</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ░░ Voice Concierge ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+      <section class="panel" data-panel="voice" aria-hidden="true">
+        <div class="panel-eyebrow">MXU Concierge · Voice AI</div>
+        <h1 class="panel-title">Talk to Concierge</h1>
+        <p class="panel-lede">Ask anything about F1 Miami weekend, MXU events, transport, dining, or the schedule. Live voice — tap to start.</p>
+
+        <div class="voice" id="voicePanel">
+          <div class="voice__sub">Live · Powered by ElevenLabs</div>
+          <div class="voice__title">MXU Concierge</div>
+          <div class="voice__orb" id="voiceOrb" role="button" tabindex="0" aria-label="Voice orb">
+            <span class="voice__orb-ring"></span>
+            <span class="voice__orb-core"></span>
+          </div>
+          <p class="voice__copy">Tap Start, then speak naturally. The Concierge knows the MXU schedule, F1 Miami logistics, and the best of the city.</p>
+          <div class="booth__row" style="width:100%;max-width:320px">
+            <button class="btn btn--primary" id="voiceStart" type="button">🎙️ Start</button>
+            <button class="btn btn--ghost"   id="voiceStop"  type="button" disabled>Stop</button>
+          </div>
+          <div class="voice__status" id="voiceStatus">Tap Start to begin a voice conversation.</div>
+        </div>
+      </section>
+
+      <!-- ░░ The Circuit ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+      <section class="panel" data-panel="circuit" aria-hidden="true">
+        <div class="panel-eyebrow">5 Nights · One Paddock</div>
+        <h1 class="panel-title">The MXU Circuit</h1>
+        <p class="panel-lede">Welcome week curated for the F1 Miami crowd — from hangar arrivals to the post-race afterparty.</p>
+
+        <ul class="nights">
+          <li class="night">
+            <div class="night__img" style="background-image:url('/assets/mxu_hero_hangar.png')">
+              <span class="night__num">N° 01</span>
+            </div>
+            <div class="night__body">
+              <div class="night__day">Wed · Apr 30</div>
+              <h3 class="night__title">Jet Hangar Arrivals</h3>
+              <p class="night__copy">Welcome reception. Private aviation lounge. Champagne and canapés on the tarmac.</p>
+            </div>
+          </li>
+          <li class="night">
+            <div class="night__img" style="background-image:url('/assets/mxu_yacht.png')">
+              <span class="night__num">N° 02</span>
+            </div>
+            <div class="night__body">
+              <div class="night__day">Thu · May 1</div>
+              <h3 class="night__title">Yacht Sundowner</h3>
+              <p class="night__copy">Sunset cruise · Biscayne Bay · DJ and raw bar. Dock 5:30, sail at 6.</p>
+            </div>
+          </li>
+          <li class="night">
+            <div class="night__img" style="background-image:url('/assets/mxu_dinner.png')">
+              <span class="night__num">N° 03</span>
+            </div>
+            <div class="night__body">
+              <div class="night__day">Fri · May 2</div>
+              <h3 class="night__title">Driver's Dinner</h3>
+              <p class="night__copy">Chef-curated tasting menu. Black tie. Surprise guests from the paddock.</p>
+            </div>
+          </li>
+          <li class="night">
+            <div class="night__img" style="background-image:url('/assets/mxu_raceday.png')">
+              <span class="night__num">N° 04</span>
+            </div>
+            <div class="night__body">
+              <div class="night__day">Sat · May 3</div>
+              <h3 class="night__title">Qualifying &amp; Suite</h3>
+              <p class="night__copy">MXU paddock club + premium suite at Hard Rock Stadium. Open bar, full hospitality.</p>
+            </div>
+          </li>
+          <li class="night">
+            <div class="night__img" style="background-image:url('/assets/mxu_social.png')">
+              <span class="night__num">N° 05</span>
+            </div>
+            <div class="night__body">
+              <div class="night__day">Sun · May 4</div>
+              <h3 class="night__title">Race Day &amp; Afterparty</h3>
+              <p class="night__copy">Grand Prix grandstand, then late-night closing party with surprise headliner.</p>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ░░ Fast Lap ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+      <section class="panel" data-panel="fastlap" aria-hidden="true">
+        <div class="panel-eyebrow">Mini-game · 1 Lap</div>
+        <h1 class="panel-title">Fast Lap</h1>
+        <p class="panel-lede">One lap. Best time. The MXU livery. Don't cut corners — only valid laps count.</p>
+
+        <div class="game">
+          <div class="game__hud">
+            <div class="game__hud-cell">
+              <div class="game__hud-label">Time</div>
+              <div class="game__hud-value game__hud-value--accent" id="lapTime">0.00</div>
+            </div>
+            <div class="game__hud-cell">
+              <div class="game__hud-label">Best</div>
+              <div class="game__hud-value" id="lapBest">—</div>
+            </div>
+            <div class="game__hud-cell">
+              <div class="game__hud-label">Speed</div>
+              <div class="game__hud-value" id="lapSpeed">0</div>
+            </div>
+          </div>
+
+          <div class="game__canvas-wrap">
+            <canvas class="game__canvas" id="lapCanvas" width="1000" height="600"></canvas>
+            <div class="game__overlay" id="lapOverlay">
+              <div class="game__overlay-eyebrow">F1 Miami · Fast Lap</div>
+              <div class="game__overlay-title" id="lapMsgTitle">Ready to race?</div>
+              <div class="game__overlay-sub" id="lapMsgSub">One lap · You must cross the half-track gate for the lap to count.</div>
+              <button class="btn btn--accent" id="lapStart" type="button">▶  Start Lap</button>
+            </div>
+          </div>
+
+          <div class="game__pad" id="lapPad">
+            <button class="game__pad-btn game__pad-btn--steer" data-key="left"  aria-label="Steer left">◀</button>
+            <button class="game__pad-btn game__pad-btn--steer" data-key="right" aria-label="Steer right">▶</button>
+            <button class="game__pad-btn" data-key="brake">BRAKE</button>
+            <button class="game__pad-btn" data-key="gas">GAS</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ░░ Discover ░░ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+      <section class="panel" data-panel="discover" aria-hidden="true">
+        <div class="panel-eyebrow">In-app · Stays in MXU</div>
+        <h1 class="panel-title">Discover Miami</h1>
+        <p class="panel-lede">Curated guides — open inside MXU, never the browser.</p>
+
+        <div class="discover-grid">
+          <a class="discover-card" href="https://www.f1miamigp.com/" data-label="F1 Miami GP">
+            <div class="discover-card__num">N° 01</div>
+            <div class="discover-card__title">🏁 F1 Miami GP</div>
+            <div class="discover-card__desc">Official Grand Prix info, tickets, schedule and venue.</div>
+            <div class="discover-card__cta">Open ↗</div>
+          </a>
+          <a class="discover-card" href="https://www.mxu.agency/f1-miami" data-label="MXU · F1 Miami">
+            <div class="discover-card__num">N° 02</div>
+            <div class="discover-card__title">⚡ MXU · F1 Miami</div>
+            <div class="discover-card__desc">The MXU itinerary, hospitality and access details.</div>
+            <div class="discover-card__cta">Open ↗</div>
+          </a>
+          <a class="discover-card" href="https://www.miamiandbeaches.com/things-to-do" data-label="Miami Things To Do">
+            <div class="discover-card__num">N° 03</div>
+            <div class="discover-card__title">🌴 Things To Do</div>
+            <div class="discover-card__desc">Beaches, art, nightlife and the official Miami guide.</div>
+            <div class="discover-card__cta">Open ↗</div>
+          </a>
+          <a class="discover-card" href="https://www.miamiandbeaches.com/restaurants" data-label="Where To Eat">
+            <div class="discover-card__num">N° 04</div>
+            <div class="discover-card__title">🍴 Where To Eat</div>
+            <div class="discover-card__desc">Fine dining, late-night, and chef tables across Miami.</div>
+            <div class="discover-card__cta">Open ↗</div>
+          </a>
+          <a class="discover-card" href="https://www.hardrockstadium.com/" data-label="Hard Rock Stadium">
+            <div class="discover-card__num">N° 05</div>
+            <div class="discover-card__title">🏟️ Hard Rock Stadium</div>
+            <div class="discover-card__desc">Maps, concessions, parking and gate info for the venue.</div>
+            <div class="discover-card__cta">Open ↗</div>
+          </a>
+          <a class="discover-card" href="https://www.miamiandbeaches.com/neighborhoods" data-label="Neighborhoods">
+            <div class="discover-card__num">N° 06</div>
+            <div class="discover-card__title">🏙️ Neighborhoods</div>
+            <div class="discover-card__desc">From Wynwood to South Beach — pick your scene.</div>
+            <div class="discover-card__cta">Open ↗</div>
+          </a>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <div class="footer">© MXU · Powered by AI · Stay on the grid</div>
+
+  </div>
+
+  <!-- ===== In-app iframe modal ===== -->
+  <div class="iframe-modal" id="iframeModal" aria-hidden="true">
+    <div class="iframe-modal__bar">
+      <span class="iframe-modal__bar-label" id="iframeTitle">External</span>
+      <button class="iframe-modal__close" id="iframeClose" aria-label="Close">✕</button>
+    </div>
+    <iframe class="iframe-modal__frame" id="iframeFrame" title="External content" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+  </div>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
