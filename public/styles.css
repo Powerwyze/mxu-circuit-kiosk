@@ -776,7 +776,7 @@ body {
 .wheel {
   position: relative;
   width: 100%;
-  max-width: 220px;
+  max-width: 240px;
   aspect-ratio: 1 / 1;
   margin: 0 auto;
   touch-action: none;
@@ -784,10 +784,22 @@ body {
   -webkit-user-select: none;
   cursor: grab;
   outline: none;
+  transform-origin: 50% 50%;
+  will-change: transform;
 }
 .wheel:active { cursor: grabbing; }
 .wheel:focus-visible { box-shadow: 0 0 0 2px var(--red-bright); border-radius: 50%; }
-/* === F1-style D-shape steering wheel ============================ */
+/* === F1 steering wheel (image asset) ============================ */
+.wheel__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 12px 28px rgba(0,0,0,0.65));
+}
 .wheel__rim {
   position: absolute; inset: 0;
   /* D-shape: circular top, flat bottom */
@@ -802,6 +814,7 @@ body {
     0 10px 28px rgba(0,0,0,0.6),
     0 0 0 1px rgba(255,255,255,0.04);
   overflow: hidden;
+  display: none; /* legacy CSS wheel hidden — image asset replaces it */
 }
 /* Carbon-fiber weave on the rim, masked through to a transparent center */
 .wheel__carbon {

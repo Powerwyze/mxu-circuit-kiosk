@@ -606,9 +606,11 @@ const fastlap = (() => {
   function frame(){
     raf = requestAnimationFrame(frame);
 
-    const accel = 0.2, maxV = 6.0, maxReverse = -2.4;
-    const friction = 0.985, reverseF = 0.18;
-    const turn = 0.055;
+    // Tunable physics — gentler driving for first-time kiosk users.
+    // Lower turn rate so the car doesn't whip around on small wheel input.
+    const accel = 0.11, maxV = 4.4, maxReverse = -2.0;
+    const friction = 0.985, reverseF = 0.14;
+    const turn = 0.034;
 
     if (running){
       // Throttle / reverse (mutually directional)
@@ -715,7 +717,9 @@ const fastlap = (() => {
   /* ── Steering wheel (analog drag-to-rotate) ─────────────────────── */
   const wheelEl = $("#lapWheel");
   if (wheelEl) {
-    const MAX_WHEEL_DEG = 110;
+    // Wider rotation range — user must turn farther to reach full lock,
+    // so small wrist movements don't oversteer.
+    const MAX_WHEEL_DEG = 160;
     let wheelAngle = 0;
     let dragStartAngle = 0;
     let dragStartWheel = 0;
