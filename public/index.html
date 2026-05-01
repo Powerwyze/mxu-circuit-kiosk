@@ -238,10 +238,14 @@
           </div>
 
           <div class="game__pad" id="lapPad">
-            <button class="game__pad-btn game__pad-btn--steer" data-key="left"  aria-label="Steer left">◀</button>
-            <button class="game__pad-btn game__pad-btn--steer" data-key="right" aria-label="Steer right">▶</button>
-            <button class="game__pad-btn" data-key="brake">BRAKE</button>
-            <button class="game__pad-btn" data-key="gas">GAS</button>
+            <div class="game__wheel" aria-label="Steering wheel controls">
+              <button class="game__pad-btn game__pad-btn--steer" data-key="left"  aria-label="Steer left">⟲ LEFT</button>
+              <button class="game__pad-btn game__pad-btn--steer" data-key="right" aria-label="Steer right">RIGHT ⟳</button>
+            </div>
+            <div class="game__pedals">
+              <button class="game__pad-btn game__pad-btn--reverse" data-key="brake" aria-label="Reverse pedal">REVERSE</button>
+              <button class="game__pad-btn game__pad-btn--gas" data-key="gas" aria-label="Gas pedal">GAS</button>
+            </div>
           </div>
         </div>
       </section>

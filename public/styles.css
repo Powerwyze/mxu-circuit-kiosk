@@ -696,14 +696,28 @@ body {
 
 .game__pad {
   display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 0.7rem;
+}
+.game__wheel {
+  border: 2px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 0.8rem;
+  display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  background: radial-gradient(circle at 50% 45%, #2c2c2f, #131316 65%);
+}
+.game__pedals {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
   gap: 0.55rem;
 }
 .game__pad-btn {
   padding: 1rem;
   font-family: var(--mono);
   font-size: 0.78rem;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   background: var(--black-soft);
   border: 1px solid var(--line-strong);
@@ -715,7 +729,12 @@ body {
   min-height: 60px;
 }
 .game__pad-btn.is-pressed { background: var(--red); border-color: var(--red); }
-.game__pad-btn--steer { font-size: 1.4rem; }
+.game__pad-btn--steer { font-size: 0.72rem; font-weight: 700; }
+.game__pad-btn--gas { background: #0f3d22; border-color: #2fcf72; }
+.game__pad-btn--reverse { background: #3b1a1a; border-color: #e15f5f; }
+@media (max-width: 420px){
+  .game__pad { grid-template-columns: 1fr; }
+}
 
 .game__leaderboard {
   background: var(--black-soft);

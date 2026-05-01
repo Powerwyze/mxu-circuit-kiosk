@@ -586,22 +586,29 @@ const fastlap = (() => {
   function frame(){
     raf = requestAnimationFrame(frame);
 
-    const accel = 0.2, maxV = 6.0, friction = 0.985, brakeF = 0.92, turn = 0.055;
+    const accel = 0.2, reverseAccel = 0.16, maxV = 6.0, maxReverseV = -3.2, friction = 0.985, brakeF = 0.92, turn = 0.055;
 
     if (running){
       if (keys.gas)   car.v = Math.min(maxV, car.v + accel);
-      if (keys.brake) car.v *= brakeF;
-      if (!keys.gas)  car.v *= friction;
+      if (keys.brake) car.v = Math.max(maxReverseV, car.v - reverseAccel);
+      if (!keys.gas && !keys.brake)  car.v *= friction;
+      if (keys.gas && keys.brake) car.v *= brakeF;
       if (Math.abs(car.v) > 0.1){
         if (keys.left)  car.angle -= turn * (car.v / maxV);
         if (keys.right) car.angle += turn * (car.v / maxV);
       }
+
+      const prevX = car.x, prevY = car.y;
       car.x += Math.cos(car.angle) * car.v;
       car.y += Math.sin(car.angle) * car.v;
 
-      // Off-track penalty
+      // Hard track borders: bounce back and stop off-track driving
       const info = trackInfo(car.x, car.y);
-      if (info.dist > TRACK_W) car.v *= 0.85;
+      if (info.dist > TRACK_W) {
+        car.x = prevX;
+        car.y = prevY;
+        car.v *= -0.25;
+      }
 
       // Halfway gate
       if (!crossedHalf && Math.abs(info.segIdx - HALFWAY_IDX) <= 1) crossedHalf = true;
