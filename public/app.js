@@ -452,143 +452,98 @@ const voice = (() => {
 })();
 
 /* ─────────────────────────────  FAST LAP  ───────────────────────── */
+/*
+ * Clean rebuild — Bicycle-model steering for predictable, sticky control.
+ *
+ * PHYSICS MODEL
+ * -------------
+ * Steering input s ∈ [-1, +1] from a sticky drag-to-rotate wheel.
+ * Effective road-wheel angle  δ = s * MAX_STEER_RAD  (≈ ±32°).
+ * Each frame, with car speed v and wheelbase L:
+ *     car.angle += (v / L) * tan(δ) * dt
+ *     car.x     += cos(angle) * v * dt
+ *     car.y     += sin(angle) * v * dt
+ *
+ * Why this works:
+ *  - Stationary car ⇒ no rotation (v=0 cancels the term). No phantom turning.
+ *  - Slow car ⇒ tight, gentle radius. Fast car ⇒ wider radius. NO spin-out.
+ *  - The relationship is fixed and intuitive: more wheel = more turn,
+ *    same wheel angle behaves the same way every time.
+ *  - Sticky wheel: wheel holds its angle on release; only Start Lap recenters.
+ */
 
 const fastlap = (() => {
-  const canvas = $("#lapCanvas");
-  const ctx = canvas.getContext("2d");
-  const overlay = $("#lapOverlay");
+  /* ── DOM refs ────────────────────────────────────────────────────── */
+  const canvas   = $("#lapCanvas");
+  const ctx      = canvas.getContext("2d");
+  const overlay  = $("#lapOverlay");
   const msgTitle = $("#lapMsgTitle");
   const msgSub   = $("#lapMsgSub");
   const startBtn = $("#lapStart");
   const timeEl   = $("#lapTime");
   const bestEl   = $("#lapBest");
   const speedEl  = $("#lapSpeed");
+  const wheelEl  = $("#lapWheel");
 
+  /* ── Assets ──────────────────────────────────────────────────────── */
   const carImg   = new Image(); carImg.src   = "/assets/mxu_f1_car_sprite.png";
   const trackImg = new Image(); trackImg.src = "/assets/mxu_track_overlay.png";
   let trackReady = false; trackImg.onload = () => trackReady = true;
-  let carReady   = false;   carImg.onload = () => carReady = true;
+  let carReady   = false;   carImg.onload  = () => carReady   = true;
 
+  /* ── World ──────────────────────────────────────────────────────── */
   const W = 1000, H = 600;
 
-  // Track centerline (looped)
+  // Track centerline (looped polyline)
   const TRACK = [
     [180, 470],[140, 400],[140, 280],[210, 200],[330, 170],
     [470, 200],[560, 260],[640, 230],[760, 180],[860, 220],
     [880, 320],[820, 410],[700, 440],[600, 420],[510, 470],
     [380, 510],[260, 510]
   ];
-  const TRACK_W = 78;
-  const START_IDX = 0;
+  const TRACK_W    = 78;
+  const START_IDX  = 0;
   const HALFWAY_IDX = Math.floor(TRACK.length / 2);
 
-  let car = { x: 200, y: 470, angle: 0, v: 0 };
-  // steer is analog: -1 (full left) .. +1 (full right). gas/reverse are booleans.
-  let keys = { left:false, right:false, gas:false, brake:false, reverse:false, steer: 0 };
-  let running = false, startedAt = 0, elapsed = 0, lapDone = false;
+  /* ── Tuning constants (the heart of feel) ───────────────────────── */
+  // Speed (units = pixels/frame at 60fps)
+  const MAX_V        = 4.6;     // top forward speed
+  const MAX_REVERSE  = -2.2;    // top reverse speed (~half of forward)
+  const ACCEL        = 0.085;   // gas acceleration per frame
+  const REVERSE_ACC  = 0.06;    // reverse acceleration per frame
+  const ENGINE_BRAKE = 0.985;   // multiplicative friction when no pedal
+
+  // Steering (bicycle model). The turn radius at full lock is approximately
+  // R = WHEELBASE / tan(MAX_STEER_RAD). With these values:
+  //   R ≈ 90 / tan(0.55) ≈ 147 px — comfortably wider than the car (60 px)
+  //   and well-matched to the inner radius of the track corners.
+  // Turn rate at top speed + full lock ≈ 1.9 rad/s — smooth, never whips.
+  const MAX_STEER_RAD = 0.55;   // ~32° road-wheel angle at full lock
+  const WHEELBASE     = 90;     // pixels — effective front/rear axle distance
+  // Visual wheel range: how far the user must drag to reach full lock
+  const MAX_WHEEL_DEG = 150;
+  // Keyboard nudge per arrow keypress (degrees)
+  const KEY_NUDGE_DEG = 15;
+
+  // Border bleed — when the car hits the kerb
+  const BORDER_BLEED  = 0.55;
+
+  /* ── State ──────────────────────────────────────────────────────── */
+  const car = { x: 200, y: 470, angle: 0, v: 0 };
+  // input.steer is the analog wheel value in [-1, +1]. Pedals are booleans.
+  const input = { gas: false, reverse: false, steer: 0 };
+  let running = false, startedAt = 0, elapsed = 0;
   let crossedHalf = false;
   let raf = 0;
+  let lastTs = 0;
 
-  const bestKey = "mxu_fast_lap_v1";
-  const readBest = () => { const v = +localStorage.getItem(bestKey); return Number.isFinite(v) && v > 0 ? v : null; };
-  const writeBest = t => localStorage.setItem(bestKey, String(t));
-  const showBest = () => { const b = readBest(); bestEl.textContent = b ? b.toFixed(2) + "s" : "—"; };
+  /* ── Best-time persistence ──────────────────────────────────────── */
+  const BEST_KEY = "mxu_fast_lap_v1";
+  const readBest  = () => { const v = +localStorage.getItem(BEST_KEY); return Number.isFinite(v) && v > 0 ? v : null; };
+  const writeBest = t => localStorage.setItem(BEST_KEY, String(t));
+  const showBest  = () => { const b = readBest(); bestEl.textContent = b ? b.toFixed(2) + "s" : "—"; };
 
-  function distToSeg(px, py, ax, ay, bx, by){
-    const dx = bx-ax, dy = by-ay;
-    const t = Math.max(0, Math.min(1, ((px-ax)*dx + (py-ay)*dy) / (dx*dx + dy*dy || 1)));
-    const cx = ax + t*dx, cy = ay + t*dy;
-    return Math.hypot(px-cx, py-cy);
-  }
-  function trackInfo(px, py){
-    let min = Infinity, idx = 0;
-    for (let i = 0; i < TRACK.length; i++){
-      const a = TRACK[i], b = TRACK[(i+1) % TRACK.length];
-      const d = distToSeg(px, py, a[0], a[1], b[0], b[1]);
-      if (d < min) { min = d; idx = i; }
-    }
-    return { dist: min, segIdx: idx };
-  }
-
-  function drawTrack(){
-    if (trackReady) {
-      ctx.drawImage(trackImg, 0, 0, W, H);
-      // semi-transparent overlay so the track-line we draw still pops
-      ctx.fillStyle = "rgba(0,0,0,0.35)";
-      ctx.fillRect(0,0,W,H);
-    } else {
-      // Stylized fallback
-      const g = ctx.createLinearGradient(0,0,0,H);
-      g.addColorStop(0, "#0d2114"); g.addColorStop(1, "#06120a");
-      ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-    }
-
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-
-    // Outer kerb (red-white motif)
-    ctx.beginPath();
-    ctx.moveTo(TRACK[0][0], TRACK[0][1]);
-    for (let i = 1; i <= TRACK.length; i++) ctx.lineTo(TRACK[i % TRACK.length][0], TRACK[i % TRACK.length][1]);
-    ctx.lineWidth = TRACK_W * 2 + 12;
-    ctx.strokeStyle = "#e10600";
-    ctx.stroke();
-    ctx.lineWidth = TRACK_W * 2 + 4;
-    ctx.strokeStyle = "#fff";
-    ctx.stroke();
-
-    // Asphalt
-    ctx.lineWidth = TRACK_W * 2;
-    ctx.strokeStyle = "#1a1a1d";
-    ctx.stroke();
-
-    // Centerline dashes
-    ctx.lineWidth = 3;
-    ctx.setLineDash([14, 16]);
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Start/finish bar
-    const a = TRACK[START_IDX], b = TRACK[(START_IDX+1) % TRACK.length];
-    const mx = (a[0]+b[0])/2, my = (a[1]+b[1])/2;
-    const ang = Math.atan2(b[1]-a[1], b[0]-a[0]) + Math.PI/2;
-    ctx.save(); ctx.translate(mx, my); ctx.rotate(ang);
-    const tiles = 14, tileW = (TRACK_W*2)/tiles, tileH = 14;
-    for (let i = 0; i < tiles; i++){
-      ctx.fillStyle = (i % 2) ? "#fff" : "#111";
-      ctx.fillRect(-TRACK_W + i*tileW, -tileH/2, tileW, tileH);
-    }
-    ctx.restore();
-  }
-
-  function drawCar(){
-    ctx.save();
-    ctx.translate(car.x, car.y);
-    ctx.rotate(car.angle + Math.PI/2);
-    if (carReady) {
-      const cw = 60, ch = 96;
-      ctx.drawImage(carImg, -cw/2, -ch/2, cw, ch);
-    } else {
-      ctx.fillStyle = "#e10600"; ctx.fillRect(-12, -22, 24, 44);
-      ctx.fillStyle = "#111";    ctx.fillRect(-9,  -10, 18, 14);
-    }
-    ctx.restore();
-  }
-
-  function reset(){
-    car.x = TRACK[0][0] + 20; car.y = TRACK[0][1] - 10;
-    const next = TRACK[1];
-    car.angle = Math.atan2(next[1] - car.y, next[0] - car.x);
-    car.v = 0;
-    elapsed = 0; lapDone = false; crossedHalf = false;
-    timeEl.textContent = "0.00"; speedEl.textContent = "0";
-    // Recenter the steering wheel for a fresh lap
-    keys.steer = 0;
-    const _w = document.getElementById("lapWheel");
-    if (_w) _w.dispatchEvent(new CustomEvent("mxu:wheelreset"));
-  }
-
-  // Closest point on the centerline polyline (for hard borders)
+  /* ── Geometry helpers ───────────────────────────────────────────── */
   function closestOnTrack(px, py){
     let bestD = Infinity, bestX = px, bestY = py, bestIdx = 0;
     for (let i = 0; i < TRACK.length; i++){
@@ -603,84 +558,176 @@ const fastlap = (() => {
     return { dist: bestD, cx: bestX, cy: bestY, segIdx: bestIdx };
   }
 
-  function frame(){
+  /* ── Render ─────────────────────────────────────────────────────── */
+  function drawTrack(){
+    if (trackReady) {
+      ctx.drawImage(trackImg, 0, 0, W, H);
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(0,0,W,H);
+    } else {
+      const g = ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0, "#0d2114"); g.addColorStop(1, "#06120a");
+      ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    }
+
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+
+    // Build the closed track path once
+    ctx.beginPath();
+    ctx.moveTo(TRACK[0][0], TRACK[0][1]);
+    for (let i = 1; i <= TRACK.length; i++) {
+      ctx.lineTo(TRACK[i % TRACK.length][0], TRACK[i % TRACK.length][1]);
+    }
+
+    // Outer red kerb
+    ctx.lineWidth = TRACK_W * 2 + 12;
+    ctx.strokeStyle = "#e10600";
+    ctx.stroke();
+    // White kerb stripe
+    ctx.lineWidth = TRACK_W * 2 + 4;
+    ctx.strokeStyle = "#fff";
+    ctx.stroke();
+    // Asphalt
+    ctx.lineWidth = TRACK_W * 2;
+    ctx.strokeStyle = "#1a1a1d";
+    ctx.stroke();
+    // Centerline dashes
+    ctx.lineWidth = 3;
+    ctx.setLineDash([14, 16]);
+    ctx.strokeStyle = "rgba(255,255,255,0.55)";
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Start/finish — checkered bar
+    const a = TRACK[START_IDX], b = TRACK[(START_IDX+1) % TRACK.length];
+    const mx = (a[0]+b[0])/2, my = (a[1]+b[1])/2;
+    const ang = Math.atan2(b[1]-a[1], b[0]-a[0]) + Math.PI/2;
+    ctx.save(); ctx.translate(mx, my); ctx.rotate(ang);
+    const tiles = 14, tileW = (TRACK_W*2)/tiles, tileH = 14;
+    for (let i = 0; i < tiles; i++){
+      ctx.fillStyle = (i % 2) ? "#fff" : "#111";
+      ctx.fillRect(-TRACK_W + i*tileW, -tileH/2, tileW, tileH);
+    }
+    ctx.restore();
+  }
+
+  function drawHalfwayGate(){
+    const a = TRACK[HALFWAY_IDX], b = TRACK[(HALFWAY_IDX+1) % TRACK.length];
+    ctx.save();
+    ctx.strokeStyle = crossedHalf ? "#28d96b" : "#ffd400";
+    ctx.lineWidth = 5; ctx.setLineDash([10, 8]);
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawCar(){
+    ctx.save();
+    ctx.translate(car.x, car.y);
+    // Sprite faces "up" (negative Y); car.angle uses screen convention (0 = +X).
+    ctx.rotate(car.angle + Math.PI/2);
+    if (carReady) {
+      const cw = 60, ch = 96;
+      ctx.drawImage(carImg, -cw/2, -ch/2, cw, ch);
+    } else {
+      ctx.fillStyle = "#e10600"; ctx.fillRect(-12, -22, 24, 44);
+      ctx.fillStyle = "#111";    ctx.fillRect(-9,  -10, 18, 14);
+    }
+    ctx.restore();
+  }
+
+  /* ── Step (physics) ─────────────────────────────────────────────── */
+  function step(dt){
+    // 1. Throttle / reverse — apply along the car's current heading.
+    if (input.gas && !input.reverse) {
+      car.v = Math.min(MAX_V, car.v + ACCEL * dt);
+    } else if (input.reverse && !input.gas) {
+      car.v = Math.max(MAX_REVERSE, car.v - REVERSE_ACC * dt);
+    } else {
+      car.v *= Math.pow(ENGINE_BRAKE, dt);
+      if (Math.abs(car.v) < 0.02) car.v = 0;
+    }
+
+    // 2. Bicycle-model steering.
+    //    angle += (v / L) * tan(δ) * dt
+    //    Reverse: signed v naturally flips the steering direction (correct).
+    const s     = Math.max(-1, Math.min(1, input.steer));
+    const delta = s * MAX_STEER_RAD;
+    if (Math.abs(car.v) > 0.01) {
+      car.angle += (car.v / WHEELBASE) * Math.tan(delta) * dt;
+    }
+
+    // 3. Tentative new position.
+    let nx = car.x + Math.cos(car.angle) * car.v * dt;
+    let ny = car.y + Math.sin(car.angle) * car.v * dt;
+
+    // 4. Hard track borders — clamp inside the asphalt corridor.
+    const HALF = TRACK_W - 14;
+    const info = closestOnTrack(nx, ny);
+    if (info.dist > HALF){
+      const nxv = (nx - info.cx) / (info.dist || 1);
+      const nyv = (ny - info.cy) / (info.dist || 1);
+      nx = info.cx + nxv * HALF;
+      ny = info.cy + nyv * HALF;
+      car.v *= BORDER_BLEED;
+    }
+    car.x = nx; car.y = ny;
+
+    // 5. Halfway gate (segment-based, robust to direction).
+    if (!crossedHalf && Math.abs(info.segIdx - HALFWAY_IDX) <= 1) {
+      crossedHalf = true;
+    }
+
+    // 6. Lap finish: must have crossed halfway, be near start, moving forward.
+    if (crossedHalf && info.segIdx === START_IDX && info.dist < HALF
+        && elapsed > 1.2 && car.v > 0) {
+      finishLap();
+    }
+  }
+
+  function frame(ts){
     raf = requestAnimationFrame(frame);
 
-    // Tunable physics — gentler driving for first-time kiosk users.
-    // Lower turn rate so the car doesn't whip around on small wheel input.
-    const accel = 0.11, maxV = 4.4, maxReverse = -2.0;
-    const friction = 0.985, reverseF = 0.14;
-    const turn = 0.034;
+    // Frame-time normalized to 60fps (so dt ≈ 1 at 60fps).
+    // Clamp huge gaps (tab-switch etc.) to keep physics stable.
+    if (!lastTs) lastTs = ts;
+    let dt = (ts - lastTs) / (1000 / 60);
+    lastTs = ts;
+    if (!Number.isFinite(dt) || dt <= 0) dt = 1;
+    if (dt > 3) dt = 3;
 
-    if (running){
-      // Throttle / reverse (mutually directional)
-      if (keys.gas && !keys.reverse) {
-        car.v = Math.min(maxV, car.v + accel);
-      } else if (keys.reverse && !keys.gas) {
-        car.v = Math.max(maxReverse, car.v - reverseF);
-      } else {
-        car.v *= friction;
-        if (Math.abs(car.v) < 0.02) car.v = 0;
-      }
-
-      // Steering: analog wheel + digital (arrow-key) fallback
-      let steer = keys.steer;
-      if (keys.left  && !keys.right) steer = Math.min(steer, -1);
-      if (keys.right && !keys.left)  steer = Math.max(steer,  1);
-      steer = Math.max(-1, Math.min(1, steer));
-
-      if (Math.abs(car.v) > 0.05){
-        // turn rate scales with speed; reversed steering when going backwards
-        const dir = car.v >= 0 ? 1 : -1;
-        car.angle += steer * turn * (Math.abs(car.v) / maxV) * dir;
-      }
-
-      // Tentative new position
-      let nx = car.x + Math.cos(car.angle) * car.v;
-      let ny = car.y + Math.sin(car.angle) * car.v;
-
-      // Hard track borders: clamp the car back inside if it tries to leave
-      const HALF = TRACK_W - 14; // car half-width buffer
-      const info = closestOnTrack(nx, ny);
-      if (info.dist > HALF){
-        const nxv = (nx - info.cx) / (info.dist || 1);
-        const nyv = (ny - info.cy) / (info.dist || 1);
-        nx = info.cx + nxv * HALF;
-        ny = info.cy + nyv * HALF;
-        car.v *= 0.55; // bleed speed on contact
-      }
-      car.x = nx; car.y = ny;
-
-      // Halfway gate
-      if (!crossedHalf && Math.abs(info.segIdx - HALFWAY_IDX) <= 1) crossedHalf = true;
-
-      // Finish: cross start/finish AFTER halfway, only when moving forward
-      if (crossedHalf && info.segIdx === START_IDX && info.dist < HALF && elapsed > 1.2 && car.v > 0) finishLap();
-
+    if (running) {
+      step(dt);
       elapsed = (performance.now() - startedAt) / 1000;
-      timeEl.textContent = elapsed.toFixed(2);
+      timeEl.textContent  = elapsed.toFixed(2);
+      // Display speed: pixels/frame → "km/h" feel (cosmetic only).
       speedEl.textContent = Math.round(Math.abs(car.v) * 36) + "";
     }
 
-    ctx.clearRect(0,0,W,H);
+    ctx.clearRect(0, 0, W, H);
     drawTrack();
-
-    if (running){
-      // halfway gate marker
-      const a = TRACK[HALFWAY_IDX], b = TRACK[(HALFWAY_IDX+1) % TRACK.length];
-      ctx.save();
-      ctx.strokeStyle = crossedHalf ? "#28d96b" : "#ffd400";
-      ctx.lineWidth = 5; ctx.setLineDash([10, 8]);
-      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-    }
-
+    if (running) drawHalfwayGate();
     drawCar();
   }
 
+  /* ── Lap lifecycle ──────────────────────────────────────────────── */
+  function reset(){
+    car.x = TRACK[0][0] + 20;
+    car.y = TRACK[0][1] - 10;
+    const next = TRACK[1];
+    car.angle = Math.atan2(next[1] - car.y, next[0] - car.x);
+    car.v = 0;
+    elapsed = 0;
+    crossedHalf = false;
+    timeEl.textContent  = "0.00";
+    speedEl.textContent = "0";
+    // Recenter the steering wheel for a fresh lap (only place that does this).
+    input.steer = 0;
+    if (wheelEl) wheelEl.dispatchEvent(new CustomEvent("mxu:wheelreset"));
+  }
+
   function finishLap(){
-    running = false; lapDone = true;
+    running = false;
     const t = elapsed;
     const prev = readBest();
     const isBest = !prev || t < prev;
@@ -695,67 +742,53 @@ const fastlap = (() => {
   function startRun(){
     overlay.setAttribute("hidden", "");
     reset();
-    running = true;
+    running   = true;
     startedAt = performance.now();
   }
 
   startBtn.addEventListener("click", startRun);
 
-  /* ── Pedals (GAS + REVERSE) ─────────────────────────────────────────── */
+  /* ── Pedals (GAS + REVERSE) ─────────────────────────────────────── */
   $$("#lapPad .pedal").forEach(btn => {
-    const k = btn.dataset.key;
-    const on  = e => { e.preventDefault(); keys[k] = true;  btn.classList.add("is-pressed"); };
-    const off = e => { if (e) e.preventDefault(); keys[k] = false; btn.classList.remove("is-pressed"); };
-    btn.addEventListener("touchstart", on,  { passive: false });
-    btn.addEventListener("touchend",   off, { passive: false });
-    btn.addEventListener("touchcancel",off, { passive: false });
-    btn.addEventListener("mousedown",  on);
-    btn.addEventListener("mouseup",    off);
-    btn.addEventListener("mouseleave", off);
+    const k   = btn.dataset.key;
+    const on  = e => { e.preventDefault(); input[k] = true;  btn.classList.add("is-pressed"); };
+    const off = e => { if (e) e.preventDefault(); input[k] = false; btn.classList.remove("is-pressed"); };
+    btn.addEventListener("touchstart",  on,  { passive: false });
+    btn.addEventListener("touchend",    off, { passive: false });
+    btn.addEventListener("touchcancel", off, { passive: false });
+    btn.addEventListener("mousedown",   on);
+    btn.addEventListener("mouseup",     off);
+    btn.addEventListener("mouseleave",  off);
   });
 
-  /* ── Steering wheel (analog drag-to-rotate) ─────────────────────── */
-  const wheelEl = $("#lapWheel");
+  /* ── Steering wheel (drag-to-rotate, sticky) ────────────────────── */
   if (wheelEl) {
-    // Wider rotation range — user must turn farther to reach full lock,
-    // so small wrist movements don't oversteer.
-    const MAX_WHEEL_DEG = 160;
-    let wheelAngle = 0;
-    let dragStartAngle = 0;
-    let dragStartWheel = 0;
-    let dragging = false;
-    let returnRaf = 0;
+    let wheelDeg       = 0;        // current visual wheel angle, ±MAX_WHEEL_DEG
+    let dragStartPtr   = 0;        // pointer angle (deg) at drag start
+    let dragStartWheel = 0;        // wheelDeg snapshot at drag start
+    let dragging       = false;
 
-    const angleFromPointer = (e) => {
-      const r = wheelEl.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
+    const pointerAngle = (e) => {
+      const r  = wheelEl.getBoundingClientRect();
+      const cx = r.left + r.width  / 2;
       const cy = r.top  + r.height / 2;
-      const px = (e.touches ? e.touches[0].clientX : e.clientX) - cx;
-      const py = (e.touches ? e.touches[0].clientY : e.clientY) - cy;
+      const t  = e.touches && e.touches[0];
+      const px = (t ? t.clientX : e.clientX) - cx;
+      const py = (t ? t.clientY : e.clientY) - cy;
       return Math.atan2(py, px) * 180 / Math.PI;
     };
+
     const applyWheel = (deg) => {
-      wheelAngle = Math.max(-MAX_WHEEL_DEG, Math.min(MAX_WHEEL_DEG, deg));
-      wheelEl.style.transform = `rotate(${wheelAngle}deg)`;
-      keys.steer = wheelAngle / MAX_WHEEL_DEG;
-      wheelEl.setAttribute("aria-valuenow", Math.round(keys.steer * 100));
+      wheelDeg = Math.max(-MAX_WHEEL_DEG, Math.min(MAX_WHEEL_DEG, deg));
+      wheelEl.style.transform = `rotate(${wheelDeg}deg)`;
+      input.steer = wheelDeg / MAX_WHEEL_DEG;
+      wheelEl.setAttribute("aria-valuenow", Math.round(input.steer * 100));
     };
-    const onDown = (e) => {
-      e.preventDefault();
-      if (returnRaf) { cancelAnimationFrame(returnRaf); returnRaf = 0; }
-      dragging = true;
-      dragStartAngle = angleFromPointer(e);
-      dragStartWheel = wheelAngle;
-      window.addEventListener("mousemove", onMove, { passive: false });
-      window.addEventListener("mouseup",   onUp,   { passive: false });
-      window.addEventListener("touchmove", onMove, { passive: false });
-      window.addEventListener("touchend",  onUp,   { passive: false });
-      window.addEventListener("touchcancel", onUp, { passive: false });
-    };
+
     const onMove = (e) => {
       if (!dragging) return;
       e.preventDefault();
-      let delta = angleFromPointer(e) - dragStartAngle;
+      let delta = pointerAngle(e) - dragStartPtr;
       while (delta >  180) delta -= 360;
       while (delta < -180) delta += 360;
       applyWheel(dragStartWheel + delta);
@@ -763,40 +796,51 @@ const fastlap = (() => {
     const onUp = () => {
       if (!dragging) return;
       dragging = false;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup",   onUp);
-      window.removeEventListener("touchmove", onMove);
-      window.removeEventListener("touchend",  onUp);
-      window.removeEventListener("touchcancel", onUp);
-      // Sticky steering — wheel holds the angle the user released it at.
-      // Resetting to center happens only on a fresh lap (reset()).
+      window.removeEventListener("mousemove",  onMove);
+      window.removeEventListener("mouseup",    onUp);
+      window.removeEventListener("touchmove",  onMove);
+      window.removeEventListener("touchend",   onUp);
+      window.removeEventListener("touchcancel",onUp);
+      // Sticky — wheelDeg stays where the user released it.
     };
-    // Allow reset() to recenter the wheel between laps
+    const onDown = (e) => {
+      e.preventDefault();
+      dragging       = true;
+      dragStartPtr   = pointerAngle(e);
+      dragStartWheel = wheelDeg;
+      window.addEventListener("mousemove",  onMove, { passive: false });
+      window.addEventListener("mouseup",    onUp,   { passive: false });
+      window.addEventListener("touchmove",  onMove, { passive: false });
+      window.addEventListener("touchend",   onUp,   { passive: false });
+      window.addEventListener("touchcancel",onUp,   { passive: false });
+    };
+
+    wheelEl.addEventListener("mousedown",  onDown);
+    wheelEl.addEventListener("touchstart", onDown, { passive: false });
+
+    // Recenter only on a fresh lap.
     wheelEl.addEventListener("mxu:wheelreset", () => {
-      if (returnRaf) { cancelAnimationFrame(returnRaf); returnRaf = 0; }
-      wheelAngle = 0;
-      keys.steer = 0;
+      wheelDeg = 0;
+      input.steer = 0;
       wheelEl.style.transform = "rotate(0deg)";
       wheelEl.setAttribute("aria-valuenow", "0");
     });
-    wheelEl.addEventListener("mousedown",  onDown);
-    wheelEl.addEventListener("touchstart", onDown, { passive: false });
+
+    // Keyboard fallback nudges the same wheel — also sticky.
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft")  { applyWheel(wheelDeg - KEY_NUDGE_DEG); e.preventDefault(); }
+      if (e.key === "ArrowRight") { applyWheel(wheelDeg + KEY_NUDGE_DEG); e.preventDefault(); }
+      if (e.key === "ArrowUp")    { input.gas     = true; e.preventDefault(); }
+      if (e.key === "ArrowDown")  { input.reverse = true; e.preventDefault(); }
+    });
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowUp")    input.gas     = false;
+      if (e.key === "ArrowDown")  input.reverse = false;
+      // Arrow-left/right release does NOT recenter the wheel (sticky).
+    });
   }
 
-  /* ── Keyboard fallback ───────────────────────────────────────────── */
-  document.addEventListener("keydown", e => {
-    if (e.key === "ArrowLeft")  keys.left    = true;
-    if (e.key === "ArrowRight") keys.right   = true;
-    if (e.key === "ArrowUp")    keys.gas     = true;
-    if (e.key === "ArrowDown")  keys.reverse = true;
-  });
-  document.addEventListener("keyup", e => {
-    if (e.key === "ArrowLeft")  keys.left    = false;
-    if (e.key === "ArrowRight") keys.right   = false;
-    if (e.key === "ArrowUp")    keys.gas     = false;
-    if (e.key === "ArrowDown")  keys.reverse = false;
-  });
-
+  /* ── Public API (preserved exactly) ─────────────────────────────── */
   return {
     onShow: () => {
       showBest();
@@ -806,9 +850,15 @@ const fastlap = (() => {
       msgSub.textContent   = "One lap · You must cross the half-track gate for the lap to count.";
       startBtn.textContent = "▶  Start Lap";
       cancelAnimationFrame(raf);
+      lastTs = 0;
       raf = requestAnimationFrame(frame);
     },
-    onHide: () => { cancelAnimationFrame(raf); running = false; },
+    onHide: () => {
+      cancelAnimationFrame(raf);
+      running = false;
+      input.gas = false;
+      input.reverse = false;
+    },
   };
 })();
 
