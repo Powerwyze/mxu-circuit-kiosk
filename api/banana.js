@@ -27,6 +27,10 @@ const PROMPT = [
   "Color palette: deep blacks, MXU racing red, crisp whites, with warm red rim light and subtle red light streaks for motion.",
   "Mood: confident hero pose, magazine cover energy, cinematic composition.",
   "IMPORTANT: keep the person's face shape, hair style and color, skin tone, ethnicity and overall identity clearly recognizable — but rendered in the animated illustration style described above (stylized, not realistic).",
+  "CRITICAL STYLE LOCK: the face/head must match the exact same stylized illustrated treatment as the body and background (same linework, same cel-shading, same painterly finish). No realistic skin texture, no photographic pores, no photo-like lighting on the face, and no mixed-media look.",
+  "If the face appears more realistic than the rest of the image, regenerate it in stronger stylization until the entire composition is visually consistent as one unified illustrated poster.",
+  "Output must look like a single cohesive digital illustration/poster from top to bottom — not a real photo head composited onto an illustrated body.",
+  "Preserve likeness while simplifying details into stylized forms: smooth cel-shaded gradients, defined contour lines, and illustrated shadows across the face.",
 ].join(" ");
 
 function setCors(res){
