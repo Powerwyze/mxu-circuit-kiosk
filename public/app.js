@@ -638,6 +638,9 @@ const fastlap = (() => {
 
   /* ── Step (physics) ─────────────────────────────────────────────── */
   function step(dt){
+    // 0. Update analog steering from held arrow buttons / keys.
+    updateSteer(dt);
+
     // 1. Throttle / reverse — apply along the car's current heading.
     if (input.gas && !input.reverse) {
       car.v = Math.min(MAX_V, car.v + ACCEL * dt);
@@ -721,9 +724,10 @@ const fastlap = (() => {
     crossedHalf = false;
     timeEl.textContent  = "0.00";
     speedEl.textContent = "0";
-    // Recenter the steering wheel for a fresh lap (only place that does this).
+    // Recenter steering for a fresh lap.
     input.steer = 0;
-    if (wheelEl) wheelEl.dispatchEvent(new CustomEvent("mxu:wheelreset"));
+    heldDir.left = false;
+    heldDir.right = false;
   }
 
   function finishLap(){
@@ -761,83 +765,53 @@ const fastlap = (() => {
     btn.addEventListener("mouseleave",  off);
   });
 
-  /* ── Steering wheel (drag-to-rotate, sticky) ────────────────────── */
-  if (wheelEl) {
-    let wheelDeg       = 0;        // current visual wheel angle, ±MAX_WHEEL_DEG
-    let dragStartPtr   = 0;        // pointer angle (deg) at drag start
-    let dragStartWheel = 0;        // wheelDeg snapshot at drag start
-    let dragging       = false;
+  /* ── Steering: hold-to-turn arrow buttons + arrow keys ──────────── */
+  // input.steer is an analog value in [-1, +1] that ramps toward the
+  // direction held and decays back toward 0 when released. Per-frame
+  // ramp/decay rates (per 60fps frame):
+  const STEER_RAMP  = 0.085;  // how fast steering builds up while held
+  const STEER_DECAY = 0.18;   // how fast it returns to center on release
+  const heldDir = { left: false, right: false };
 
-    const pointerAngle = (e) => {
-      const r  = wheelEl.getBoundingClientRect();
-      const cx = r.left + r.width  / 2;
-      const cy = r.top  + r.height / 2;
-      const t  = e.touches && e.touches[0];
-      const px = (t ? t.clientX : e.clientX) - cx;
-      const py = (t ? t.clientY : e.clientY) - cy;
-      return Math.atan2(py, px) * 180 / Math.PI;
-    };
+  // Wire on-screen LEFT/RIGHT buttons.
+  $$("#lapPad .steerbtn").forEach(btn => {
+    const k   = btn.dataset.key; // "left" | "right"
+    const on  = e => { e.preventDefault(); heldDir[k] = true;  btn.classList.add("is-pressed"); };
+    const off = e => { if (e) e.preventDefault(); heldDir[k] = false; btn.classList.remove("is-pressed"); };
+    btn.addEventListener("touchstart",  on,  { passive: false });
+    btn.addEventListener("touchend",    off, { passive: false });
+    btn.addEventListener("touchcancel", off, { passive: false });
+    btn.addEventListener("mousedown",   on);
+    btn.addEventListener("mouseup",     off);
+    btn.addEventListener("mouseleave",  off);
+  });
 
-    const applyWheel = (deg) => {
-      wheelDeg = Math.max(-MAX_WHEEL_DEG, Math.min(MAX_WHEEL_DEG, deg));
-      wheelEl.style.transform = `rotate(${wheelDeg}deg)`;
-      input.steer = wheelDeg / MAX_WHEEL_DEG;
-      wheelEl.setAttribute("aria-valuenow", Math.round(input.steer * 100));
-    };
+  // Arrow-key fallback for desktop.
+  document.addEventListener("keydown", (e) => {
+    if (e.repeat) return;
+    if (e.key === "ArrowLeft")  { heldDir.left  = true; e.preventDefault(); }
+    if (e.key === "ArrowRight") { heldDir.right = true; e.preventDefault(); }
+    if (e.key === "ArrowUp")    { input.gas     = true; e.preventDefault(); }
+    if (e.key === "ArrowDown")  { input.reverse = true; e.preventDefault(); }
+  });
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "ArrowLeft")  heldDir.left  = false;
+    if (e.key === "ArrowRight") heldDir.right = false;
+    if (e.key === "ArrowUp")    input.gas     = false;
+    if (e.key === "ArrowDown")  input.reverse = false;
+  });
 
-    const onMove = (e) => {
-      if (!dragging) return;
-      e.preventDefault();
-      let delta = pointerAngle(e) - dragStartPtr;
-      while (delta >  180) delta -= 360;
-      while (delta < -180) delta += 360;
-      applyWheel(dragStartWheel + delta);
-    };
-    const onUp = () => {
-      if (!dragging) return;
-      dragging = false;
-      window.removeEventListener("mousemove",  onMove);
-      window.removeEventListener("mouseup",    onUp);
-      window.removeEventListener("touchmove",  onMove);
-      window.removeEventListener("touchend",   onUp);
-      window.removeEventListener("touchcancel",onUp);
-      // Sticky — wheelDeg stays where the user released it.
-    };
-    const onDown = (e) => {
-      e.preventDefault();
-      dragging       = true;
-      dragStartPtr   = pointerAngle(e);
-      dragStartWheel = wheelDeg;
-      window.addEventListener("mousemove",  onMove, { passive: false });
-      window.addEventListener("mouseup",    onUp,   { passive: false });
-      window.addEventListener("touchmove",  onMove, { passive: false });
-      window.addEventListener("touchend",   onUp,   { passive: false });
-      window.addEventListener("touchcancel",onUp,   { passive: false });
-    };
-
-    wheelEl.addEventListener("mousedown",  onDown);
-    wheelEl.addEventListener("touchstart", onDown, { passive: false });
-
-    // Recenter only on a fresh lap.
-    wheelEl.addEventListener("mxu:wheelreset", () => {
-      wheelDeg = 0;
-      input.steer = 0;
-      wheelEl.style.transform = "rotate(0deg)";
-      wheelEl.setAttribute("aria-valuenow", "0");
-    });
-
-    // Keyboard fallback nudges the same wheel — also sticky.
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft")  { applyWheel(wheelDeg - KEY_NUDGE_DEG); e.preventDefault(); }
-      if (e.key === "ArrowRight") { applyWheel(wheelDeg + KEY_NUDGE_DEG); e.preventDefault(); }
-      if (e.key === "ArrowUp")    { input.gas     = true; e.preventDefault(); }
-      if (e.key === "ArrowDown")  { input.reverse = true; e.preventDefault(); }
-    });
-    document.addEventListener("keyup", (e) => {
-      if (e.key === "ArrowUp")    input.gas     = false;
-      if (e.key === "ArrowDown")  input.reverse = false;
-      // Arrow-left/right release does NOT recenter the wheel (sticky).
-    });
+  // Per-frame steering update: ramp toward held direction, decay otherwise.
+  function updateSteer(dt){
+    if (heldDir.left && !heldDir.right) {
+      input.steer = Math.max(-1, input.steer - STEER_RAMP * dt);
+    } else if (heldDir.right && !heldDir.left) {
+      input.steer = Math.min( 1, input.steer + STEER_RAMP * dt);
+    } else {
+      // Decay toward center
+      if (input.steer >  0) input.steer = Math.max(0, input.steer - STEER_DECAY * dt);
+      else if (input.steer < 0) input.steer = Math.min(0, input.steer + STEER_DECAY * dt);
+    }
   }
 
   /* ── Public API (preserved exactly) ─────────────────────────────── */

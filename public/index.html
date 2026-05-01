@@ -238,8 +238,15 @@
           </div>
 
           <div class="game__controls" id="lapPad">
-            <div class="wheel" id="lapWheel" role="slider" aria-label="Steering wheel" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" tabindex="0">
-              <img class="wheel__img" src="assets/mxu_f1_wheel.png" alt="MXU F1 steering wheel" draggable="false" />
+            <div class="steerpad" aria-label="Steering controls">
+              <button class="steerbtn steerbtn--left" data-key="left" aria-label="Steer left" type="button">
+                <span class="steerbtn__icon" aria-hidden="true">◀</span>
+                <span class="steerbtn__label">LEFT</span>
+              </button>
+              <button class="steerbtn steerbtn--right" data-key="right" aria-label="Steer right" type="button">
+                <span class="steerbtn__icon" aria-hidden="true">▶</span>
+                <span class="steerbtn__label">RIGHT</span>
+              </button>
             </div>
             <div class="pedals">
               <button class="pedal pedal--gas"     data-key="gas"     aria-label="Throttle">
