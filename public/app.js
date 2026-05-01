@@ -582,6 +582,10 @@ const fastlap = (() => {
     car.v = 0;
     elapsed = 0; lapDone = false; crossedHalf = false;
     timeEl.textContent = "0.00"; speedEl.textContent = "0";
+    // Recenter the steering wheel for a fresh lap
+    keys.steer = 0;
+    const _w = document.getElementById("lapWheel");
+    if (_w) _w.dispatchEvent(new CustomEvent("mxu:wheelreset"));
   }
 
   // Closest point on the centerline polyline (for hard borders)
@@ -760,18 +764,17 @@ const fastlap = (() => {
       window.removeEventListener("touchmove", onMove);
       window.removeEventListener("touchend",  onUp);
       window.removeEventListener("touchcancel", onUp);
-      const spring = () => {
-        if (dragging) return;
-        wheelAngle *= 0.82;
-        if (Math.abs(wheelAngle) < 0.5) wheelAngle = 0;
-        wheelEl.style.transform = `rotate(${wheelAngle}deg)`;
-        keys.steer = wheelAngle / MAX_WHEEL_DEG;
-        wheelEl.setAttribute("aria-valuenow", Math.round(keys.steer * 100));
-        if (wheelAngle !== 0) returnRaf = requestAnimationFrame(spring);
-        else returnRaf = 0;
-      };
-      returnRaf = requestAnimationFrame(spring);
+      // Sticky steering — wheel holds the angle the user released it at.
+      // Resetting to center happens only on a fresh lap (reset()).
     };
+    // Allow reset() to recenter the wheel between laps
+    wheelEl.addEventListener("mxu:wheelreset", () => {
+      if (returnRaf) { cancelAnimationFrame(returnRaf); returnRaf = 0; }
+      wheelAngle = 0;
+      keys.steer = 0;
+      wheelEl.style.transform = "rotate(0deg)";
+      wheelEl.setAttribute("aria-valuenow", "0");
+    });
     wheelEl.addEventListener("mousedown",  onDown);
     wheelEl.addEventListener("touchstart", onDown, { passive: false });
   }

@@ -47,11 +47,11 @@
 
     <!-- ===== Tab bar ===== -->
     <nav class="tabs" role="tablist" aria-label="Sections">
-      <button class="tab is-active" role="tab" data-tab="booth" aria-selected="true">📸 Photo&nbsp;Booth</button>
-      <button class="tab" role="tab" data-tab="voice"   aria-selected="false">🎙️ Concierge</button>
-      <button class="tab" role="tab" data-tab="circuit" aria-selected="false">🏁 The&nbsp;Circuit</button>
-      <button class="tab" role="tab" data-tab="fastlap" aria-selected="false">⏱️ Fast&nbsp;Lap</button>
-      <button class="tab" role="tab" data-tab="discover" aria-selected="false">🌴 Discover</button>
+      <button class="tab is-active" role="tab" data-tab="booth"    aria-selected="true"><span class="tab__icon">📸</span><span class="tab__label">Booth</span></button>
+      <button class="tab"           role="tab" data-tab="voice"    aria-selected="false"><span class="tab__icon">🎙️</span><span class="tab__label">Voice</span></button>
+      <button class="tab"           role="tab" data-tab="circuit"  aria-selected="false"><span class="tab__icon">🏁</span><span class="tab__label">Circuit</span></button>
+      <button class="tab"           role="tab" data-tab="fastlap"  aria-selected="false"><span class="tab__icon">⏱️</span><span class="tab__label">Fast Lap</span></button>
+      <button class="tab"           role="tab" data-tab="discover" aria-selected="false"><span class="tab__icon">🌴</span><span class="tab__label">Discover</span></button>
     </nav>
 
     <!-- ===== Panels ===== -->
@@ -240,13 +240,18 @@
           <div class="game__controls" id="lapPad">
             <div class="wheel" id="lapWheel" role="slider" aria-label="Steering wheel" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" tabindex="0">
               <div class="wheel__rim">
-                <span class="wheel__grip wheel__grip--tl"></span>
-                <span class="wheel__grip wheel__grip--tr"></span>
-                <span class="wheel__grip wheel__grip--bl"></span>
-                <span class="wheel__grip wheel__grip--br"></span>
+                <div class="wheel__carbon" aria-hidden="true"></div>
+                <span class="wheel__paddle wheel__paddle--l" aria-hidden="true"></span>
+                <span class="wheel__paddle wheel__paddle--r" aria-hidden="true"></span>
+                <span class="wheel__grip wheel__grip--l" aria-hidden="true"></span>
+                <span class="wheel__grip wheel__grip--r" aria-hidden="true"></span>
               </div>
-              <div class="wheel__hub">
-                <span class="wheel__mxu">MXU</span>
+              <div class="wheel__display" aria-hidden="true">
+                <span class="wheel__display-mxu">MXU</span>
+                <span class="wheel__display-leds">
+                  <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                </span>
+                <span class="wheel__display-tag">F1</span>
               </div>
               <div class="wheel__top-marker" aria-hidden="true"></div>
             </div>

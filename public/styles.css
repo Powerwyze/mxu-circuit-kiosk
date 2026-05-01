@@ -23,7 +23,7 @@
 
   --shadow-deep: 0 20px 50px rgba(0,0,0,0.6);
   --topbar-h: 64px;
-  --tabs-h: 56px;
+  --tabs-h: 64px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -164,35 +164,54 @@ body {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
   display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0 0.8rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
+  align-items: stretch;
+  gap: 0.25rem;
+  padding: 0.3rem 0.4rem;
+  overflow: hidden;
 }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
-  flex: 0 0 auto;
-  padding: 0.55rem 0.95rem;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  padding: 0.3rem 0.2rem;
   font-family: var(--mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
   color: var(--text-faint);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 10px;
   text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.18s ease;
+  text-align: center;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.tab__icon {
+  font-size: 1rem;
+  line-height: 1;
+  display: block;
+}
+.tab__label {
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .tab:hover { color: var(--text); }
 .tab.is-active {
   color: var(--white);
   background: var(--red);
   border-color: var(--red);
-  box-shadow: 0 4px 14px rgba(225,6,0,0.4);
+  box-shadow: 0 2px 10px rgba(225,6,0,0.35);
 }
 .tab--accent {
   border-color: var(--red);
@@ -768,79 +787,136 @@ body {
 }
 .wheel:active { cursor: grabbing; }
 .wheel:focus-visible { box-shadow: 0 0 0 2px var(--red-bright); border-radius: 50%; }
+/* === F1-style D-shape steering wheel ============================ */
 .wheel__rim {
   position: absolute; inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 35%, #2a2a2e 0%, #111114 55%, #050507 100%);
-  border: 6px solid #18181c;
+  /* D-shape: circular top, flat bottom */
+  border-radius: 50% 50% 28% 28% / 50% 50% 22% 22%;
+  background:
+    radial-gradient(circle at 50% 30%, #2c2c30 0%, #16161a 55%, #060607 100%);
+  border: 9px solid #0d0d10;
   box-shadow:
-    inset 0 0 0 2px rgba(225,6,0,0.35),
-    inset 0 -8px 20px rgba(0,0,0,0.6),
-    0 8px 24px rgba(0,0,0,0.55),
+    inset 0 0 0 2px #1f1f23,
+    inset 0 0 0 4px rgba(225,6,0,0.30),
+    inset 0 -10px 22px rgba(0,0,0,0.7),
+    0 10px 28px rgba(0,0,0,0.6),
     0 0 0 1px rgba(255,255,255,0.04);
+  overflow: hidden;
 }
-.wheel__rim::before,
-.wheel__rim::after {
-  content: "";
+/* Carbon-fiber weave on the rim, masked through to a transparent center */
+.wheel__carbon {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background-image:
+    repeating-linear-gradient( 45deg, rgba(255,255,255,0.045) 0 2px, transparent 2px 5px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.45)        0 2px, transparent 2px 5px);
+  -webkit-mask: radial-gradient(circle at 50% 50%, transparent 0 38%, #000 41%);
+          mask: radial-gradient(circle at 50% 50%, transparent 0 38%, #000 41%);
+  pointer-events: none;
+}
+/* Dual paddle shifters at 9 and 3 o'clock, behind the rim */
+.wheel__paddle {
   position: absolute;
-  background: linear-gradient(90deg, #1a1a1d, #2a2a2e 50%, #1a1a1d);
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
-}
-.wheel__rim::before {
-  left: 8%; right: 8%;
-  top: 50%; height: 18%;
-  transform: translateY(-50%);
-  border-radius: 6px;
-}
-.wheel__rim::after {
-  top: 50%; bottom: 8%;
-  left: 50%; width: 18%;
-  transform: translateX(-50%);
-  border-radius: 6px;
-}
-.wheel__hub {
-  position: absolute;
-  inset: 22%;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ff2a1a 0%, #c70500 45%, #7a0300 100%);
-  display: grid;
-  place-items: center;
+  top: 38%;
+  width: 10%;
+  height: 22%;
+  background: linear-gradient(180deg, #2a2a2e, #101013);
+  border-radius: 4px;
   box-shadow:
-    0 0 0 3px rgba(0,0,0,0.6),
-    inset 0 -6px 14px rgba(0,0,0,0.45),
-    0 0 24px rgba(225,6,0,0.45);
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    inset 0 -2px 0 rgba(0,0,0,0.6),
+    0 2px 6px rgba(0,0,0,0.55);
+  z-index: 0;
+}
+.wheel__paddle--l { left: -7%;  border-right: 1px solid rgba(225,6,0,0.4); }
+.wheel__paddle--r { right: -7%; border-left:  1px solid rgba(225,6,0,0.4); }
+/* Central LCD-style display plate */
+.wheel__display {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 56%;
+  height: 30%;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  align-items: center;
+  justify-items: center;
+  gap: 2px;
+  padding: 8% 6%;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, #050507, #0e0e12 55%, #050507),
+    #050507;
+  border: 1px solid rgba(225,6,0,0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.05),
+    inset 0 0 18px rgba(225,6,0,0.18),
+    0 0 16px rgba(225,6,0,0.35),
+    0 4px 10px rgba(0,0,0,0.6);
   z-index: 2;
 }
-.wheel__mxu {
-  font-family: var(--mono);
-  font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: 0.18em;
+.wheel__display-mxu {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 0.95rem;
+  letter-spacing: 0.22em;
   color: #fff;
-  text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+  text-shadow: 0 0 8px rgba(225,6,0,0.7);
+  line-height: 1;
+}
+.wheel__display-leds {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.wheel__display-leds i {
+  width: 6px; height: 4px;
+  border-radius: 1px;
+  background: rgba(255,255,255,0.10);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.5);
+}
+.wheel__display-leds i:nth-child(1),
+.wheel__display-leds i:nth-child(2) { background: #28d96b; box-shadow: 0 0 4px #28d96b; }
+.wheel__display-leds i:nth-child(3),
+.wheel__display-leds i:nth-child(4),
+.wheel__display-leds i:nth-child(5) { background: #ffd400; box-shadow: 0 0 4px #ffd400; }
+.wheel__display-leds i:nth-child(6),
+.wheel__display-leds i:nth-child(7) { background: var(--red-bright); box-shadow: 0 0 5px var(--red-bright); }
+.wheel__display-tag {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.32em;
+  color: var(--red-bright);
+  text-shadow: 0 0 6px rgba(225,6,0,0.5);
 }
 .wheel__top-marker {
   position: absolute;
-  top: 4%;
+  top: 6%;
   left: 50%;
   transform: translateX(-50%);
-  width: 12px; height: 12px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 8px rgba(255,255,255,0.7), 0 0 0 2px rgba(0,0,0,0.5);
+  width: 16px; height: 6px;
+  border-radius: 2px;
+  background: var(--red-bright);
+  box-shadow: 0 0 8px var(--red-bright), 0 0 0 1px rgba(0,0,0,0.6);
   z-index: 3;
 }
+/* Side grips on the rim — left/right thumb pads */
 .wheel__grip {
   position: absolute;
-  width: 14%; height: 14%;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #3a3a3f, #15151a);
-  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.55);
+  top: 26%;
+  width: 14%;
+  height: 36%;
+  border-radius: 14% / 22%;
+  background:
+    linear-gradient(180deg, #2a2a2e 0%, #15151a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -2px 4px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(0,0,0,0.55);
 }
-.wheel__grip--tl { top: 14%;   left: 14%; }
-.wheel__grip--tr { top: 14%;   right: 14%; }
-.wheel__grip--bl { bottom: 14%; left: 14%; }
-.wheel__grip--br { bottom: 14%; right: 14%; }
+.wheel__grip--l { left: 4%; }
+.wheel__grip--r { right: 4%; }
 
 .pedals {
   display: grid;
