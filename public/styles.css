@@ -746,6 +746,153 @@ body {
   .game__pad { grid-template-columns: 1fr; }
 }
 
+/* ── Steering wheel + pedals ─────────────────────────────────────── */
+.game__controls {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.4rem;
+}
+.wheel {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  outline: none;
+}
+.wheel:active { cursor: grabbing; }
+.wheel:focus-visible { box-shadow: 0 0 0 2px var(--red-bright); border-radius: 50%; }
+.wheel__rim {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #2a2a2e 0%, #111114 55%, #050507 100%);
+  border: 6px solid #18181c;
+  box-shadow:
+    inset 0 0 0 2px rgba(225,6,0,0.35),
+    inset 0 -8px 20px rgba(0,0,0,0.6),
+    0 8px 24px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.04);
+}
+.wheel__rim::before,
+.wheel__rim::after {
+  content: "";
+  position: absolute;
+  background: linear-gradient(90deg, #1a1a1d, #2a2a2e 50%, #1a1a1d);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
+}
+.wheel__rim::before {
+  left: 8%; right: 8%;
+  top: 50%; height: 18%;
+  transform: translateY(-50%);
+  border-radius: 6px;
+}
+.wheel__rim::after {
+  top: 50%; bottom: 8%;
+  left: 50%; width: 18%;
+  transform: translateX(-50%);
+  border-radius: 6px;
+}
+.wheel__hub {
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff2a1a 0%, #c70500 45%, #7a0300 100%);
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 0 0 3px rgba(0,0,0,0.6),
+    inset 0 -6px 14px rgba(0,0,0,0.45),
+    0 0 24px rgba(225,6,0,0.45);
+  z-index: 2;
+}
+.wheel__mxu {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.18em;
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+}
+.wheel__top-marker {
+  position: absolute;
+  top: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255,255,255,0.7), 0 0 0 2px rgba(0,0,0,0.5);
+  z-index: 3;
+}
+.wheel__grip {
+  position: absolute;
+  width: 14%; height: 14%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #3a3a3f, #15151a);
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.55);
+}
+.wheel__grip--tl { top: 14%;   left: 14%; }
+.wheel__grip--tr { top: 14%;   right: 14%; }
+.wheel__grip--bl { bottom: 14%; left: 14%; }
+.wheel__grip--br { bottom: 14%; right: 14%; }
+
+.pedals {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.55rem;
+  height: 100%;
+  min-height: 220px;
+}
+.pedal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.9rem 0.6rem;
+  font-family: var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: transform 60ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+.pedal__icon { font-size: 1.4rem; line-height: 1; }
+.pedal__label { font-size: 0.7rem; }
+.pedal--gas {
+  background: linear-gradient(180deg, #1a1a1d, #0c0c0e);
+  color: #fff;
+  box-shadow: inset 0 -4px 0 rgba(225,6,0,0.5), 0 4px 12px rgba(0,0,0,0.4);
+}
+.pedal--gas.is-pressed {
+  background: linear-gradient(180deg, #c70500, #7a0300);
+  border-color: var(--red-bright);
+  transform: translateY(2px);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15), 0 0 18px rgba(225,6,0,0.6);
+}
+.pedal--reverse {
+  background: linear-gradient(180deg, #1a1a1d, #0c0c0e);
+  color: #fff;
+  box-shadow: inset 0 -4px 0 rgba(255,255,255,0.18), 0 4px 12px rgba(0,0,0,0.4);
+}
+.pedal--reverse.is-pressed {
+  background: linear-gradient(180deg, #2a2a2e, #18181c);
+  border-color: #fff;
+  transform: translateY(2px);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25), 0 0 18px rgba(255,255,255,0.25);
+}
+
 .game__leaderboard {
   background: var(--black-soft);
   border: 1px solid var(--line);

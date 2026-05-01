@@ -237,14 +237,28 @@
             </div>
           </div>
 
-          <div class="game__pad" id="lapPad">
-            <div class="game__wheel" aria-label="Steering wheel controls">
-              <button class="game__pad-btn game__pad-btn--steer" data-key="left"  aria-label="Steer left">⟲ LEFT</button>
-              <button class="game__pad-btn game__pad-btn--steer" data-key="right" aria-label="Steer right">RIGHT ⟳</button>
+          <div class="game__controls" id="lapPad">
+            <div class="wheel" id="lapWheel" role="slider" aria-label="Steering wheel" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+              <div class="wheel__rim">
+                <span class="wheel__grip wheel__grip--tl"></span>
+                <span class="wheel__grip wheel__grip--tr"></span>
+                <span class="wheel__grip wheel__grip--bl"></span>
+                <span class="wheel__grip wheel__grip--br"></span>
+              </div>
+              <div class="wheel__hub">
+                <span class="wheel__mxu">MXU</span>
+              </div>
+              <div class="wheel__top-marker" aria-hidden="true"></div>
             </div>
-            <div class="game__pedals">
-              <button class="game__pad-btn game__pad-btn--reverse" data-key="brake" aria-label="Reverse pedal">REVERSE</button>
-              <button class="game__pad-btn game__pad-btn--gas" data-key="gas" aria-label="Gas pedal">GAS</button>
+            <div class="pedals">
+              <button class="pedal pedal--gas"     data-key="gas"     aria-label="Throttle">
+                <span class="pedal__icon">▲</span>
+                <span class="pedal__label">GAS</span>
+              </button>
+              <button class="pedal pedal--reverse" data-key="reverse" aria-label="Reverse">
+                <span class="pedal__icon">▼</span>
+                <span class="pedal__label">REVERSE</span>
+              </button>
             </div>
           </div>
         </div>

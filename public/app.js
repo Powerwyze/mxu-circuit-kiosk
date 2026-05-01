@@ -483,7 +483,8 @@ const fastlap = (() => {
   const HALFWAY_IDX = Math.floor(TRACK.length / 2);
 
   let car = { x: 200, y: 470, angle: 0, v: 0 };
-  let keys = { left:false, right:false, gas:false, brake:false };
+  // steer is analog: -1 (full left) .. +1 (full right). gas/reverse are booleans.
+  let keys = { left:false, right:false, gas:false, brake:false, reverse:false, steer: 0 };
   let running = false, startedAt = 0, elapsed = 0, lapDone = false;
   let crossedHalf = false;
   let raf = 0;
@@ -583,42 +584,76 @@ const fastlap = (() => {
     timeEl.textContent = "0.00"; speedEl.textContent = "0";
   }
 
+  // Closest point on the centerline polyline (for hard borders)
+  function closestOnTrack(px, py){
+    let bestD = Infinity, bestX = px, bestY = py, bestIdx = 0;
+    for (let i = 0; i < TRACK.length; i++){
+      const a = TRACK[i], b = TRACK[(i+1) % TRACK.length];
+      const dx = b[0]-a[0], dy = b[1]-a[1];
+      const len2 = dx*dx + dy*dy || 1;
+      const t = Math.max(0, Math.min(1, ((px-a[0])*dx + (py-a[1])*dy) / len2));
+      const cx = a[0] + t*dx, cy = a[1] + t*dy;
+      const d = Math.hypot(px-cx, py-cy);
+      if (d < bestD){ bestD = d; bestX = cx; bestY = cy; bestIdx = i; }
+    }
+    return { dist: bestD, cx: bestX, cy: bestY, segIdx: bestIdx };
+  }
+
   function frame(){
     raf = requestAnimationFrame(frame);
 
-    const accel = 0.2, reverseAccel = 0.16, maxV = 6.0, maxReverseV = -3.2, friction = 0.985, brakeF = 0.92, turn = 0.055;
+    const accel = 0.2, maxV = 6.0, maxReverse = -2.4;
+    const friction = 0.985, reverseF = 0.18;
+    const turn = 0.055;
 
     if (running){
-      if (keys.gas)   car.v = Math.min(maxV, car.v + accel);
-      if (keys.brake) car.v = Math.max(maxReverseV, car.v - reverseAccel);
-      if (!keys.gas && !keys.brake)  car.v *= friction;
-      if (keys.gas && keys.brake) car.v *= brakeF;
-      if (Math.abs(car.v) > 0.1){
-        if (keys.left)  car.angle -= turn * (car.v / maxV);
-        if (keys.right) car.angle += turn * (car.v / maxV);
+      // Throttle / reverse (mutually directional)
+      if (keys.gas && !keys.reverse) {
+        car.v = Math.min(maxV, car.v + accel);
+      } else if (keys.reverse && !keys.gas) {
+        car.v = Math.max(maxReverse, car.v - reverseF);
+      } else {
+        car.v *= friction;
+        if (Math.abs(car.v) < 0.02) car.v = 0;
       }
 
-      const prevX = car.x, prevY = car.y;
-      car.x += Math.cos(car.angle) * car.v;
-      car.y += Math.sin(car.angle) * car.v;
+      // Steering: analog wheel + digital (arrow-key) fallback
+      let steer = keys.steer;
+      if (keys.left  && !keys.right) steer = Math.min(steer, -1);
+      if (keys.right && !keys.left)  steer = Math.max(steer,  1);
+      steer = Math.max(-1, Math.min(1, steer));
 
-      // Hard track borders: bounce back and stop off-track driving
-      const info = trackInfo(car.x, car.y);
-      if (info.dist > TRACK_W) {
-        car.x = prevX;
-        car.y = prevY;
-        car.v *= -0.25;
+      if (Math.abs(car.v) > 0.05){
+        // turn rate scales with speed; reversed steering when going backwards
+        const dir = car.v >= 0 ? 1 : -1;
+        car.angle += steer * turn * (Math.abs(car.v) / maxV) * dir;
       }
+
+      // Tentative new position
+      let nx = car.x + Math.cos(car.angle) * car.v;
+      let ny = car.y + Math.sin(car.angle) * car.v;
+
+      // Hard track borders: clamp the car back inside if it tries to leave
+      const HALF = TRACK_W - 14; // car half-width buffer
+      const info = closestOnTrack(nx, ny);
+      if (info.dist > HALF){
+        const nxv = (nx - info.cx) / (info.dist || 1);
+        const nyv = (ny - info.cy) / (info.dist || 1);
+        nx = info.cx + nxv * HALF;
+        ny = info.cy + nyv * HALF;
+        car.v *= 0.55; // bleed speed on contact
+      }
+      car.x = nx; car.y = ny;
 
       // Halfway gate
       if (!crossedHalf && Math.abs(info.segIdx - HALFWAY_IDX) <= 1) crossedHalf = true;
 
-      // Finish: cross start/finish AFTER halfway
-      if (crossedHalf && info.segIdx === START_IDX && info.dist < TRACK_W && elapsed > 1.2) finishLap();
+      // Finish: cross start/finish AFTER halfway, only when moving forward
+      if (crossedHalf && info.segIdx === START_IDX && info.dist < HALF && elapsed > 1.2 && car.v > 0) finishLap();
 
       elapsed = (performance.now() - startedAt) / 1000;
       timeEl.textContent = elapsed.toFixed(2);
-      speedEl.textContent = Math.round(car.v * 36) + "";
+      speedEl.textContent = Math.round(Math.abs(car.v) * 36) + "";
     }
 
     ctx.clearRect(0,0,W,H);
@@ -660,8 +695,8 @@ const fastlap = (() => {
 
   startBtn.addEventListener("click", startRun);
 
-  // Touch pad (handles touch + mouse)
-  $$("#lapPad .game__pad-btn").forEach(btn => {
+  /* ── Pedals (GAS + REVERSE) ─────────────────────────────────────────── */
+  $$("#lapPad .pedal").forEach(btn => {
     const k = btn.dataset.key;
     const on  = e => { e.preventDefault(); keys[k] = true;  btn.classList.add("is-pressed"); };
     const off = e => { if (e) e.preventDefault(); keys[k] = false; btn.classList.remove("is-pressed"); };
@@ -673,18 +708,86 @@ const fastlap = (() => {
     btn.addEventListener("mouseleave", off);
   });
 
-  // Keyboard fallback
+  /* ── Steering wheel (analog drag-to-rotate) ─────────────────────── */
+  const wheelEl = $("#lapWheel");
+  if (wheelEl) {
+    const MAX_WHEEL_DEG = 110;
+    let wheelAngle = 0;
+    let dragStartAngle = 0;
+    let dragStartWheel = 0;
+    let dragging = false;
+    let returnRaf = 0;
+
+    const angleFromPointer = (e) => {
+      const r = wheelEl.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top  + r.height / 2;
+      const px = (e.touches ? e.touches[0].clientX : e.clientX) - cx;
+      const py = (e.touches ? e.touches[0].clientY : e.clientY) - cy;
+      return Math.atan2(py, px) * 180 / Math.PI;
+    };
+    const applyWheel = (deg) => {
+      wheelAngle = Math.max(-MAX_WHEEL_DEG, Math.min(MAX_WHEEL_DEG, deg));
+      wheelEl.style.transform = `rotate(${wheelAngle}deg)`;
+      keys.steer = wheelAngle / MAX_WHEEL_DEG;
+      wheelEl.setAttribute("aria-valuenow", Math.round(keys.steer * 100));
+    };
+    const onDown = (e) => {
+      e.preventDefault();
+      if (returnRaf) { cancelAnimationFrame(returnRaf); returnRaf = 0; }
+      dragging = true;
+      dragStartAngle = angleFromPointer(e);
+      dragStartWheel = wheelAngle;
+      window.addEventListener("mousemove", onMove, { passive: false });
+      window.addEventListener("mouseup",   onUp,   { passive: false });
+      window.addEventListener("touchmove", onMove, { passive: false });
+      window.addEventListener("touchend",  onUp,   { passive: false });
+      window.addEventListener("touchcancel", onUp, { passive: false });
+    };
+    const onMove = (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      let delta = angleFromPointer(e) - dragStartAngle;
+      while (delta >  180) delta -= 360;
+      while (delta < -180) delta += 360;
+      applyWheel(dragStartWheel + delta);
+    };
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup",   onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend",  onUp);
+      window.removeEventListener("touchcancel", onUp);
+      const spring = () => {
+        if (dragging) return;
+        wheelAngle *= 0.82;
+        if (Math.abs(wheelAngle) < 0.5) wheelAngle = 0;
+        wheelEl.style.transform = `rotate(${wheelAngle}deg)`;
+        keys.steer = wheelAngle / MAX_WHEEL_DEG;
+        wheelEl.setAttribute("aria-valuenow", Math.round(keys.steer * 100));
+        if (wheelAngle !== 0) returnRaf = requestAnimationFrame(spring);
+        else returnRaf = 0;
+      };
+      returnRaf = requestAnimationFrame(spring);
+    };
+    wheelEl.addEventListener("mousedown",  onDown);
+    wheelEl.addEventListener("touchstart", onDown, { passive: false });
+  }
+
+  /* ── Keyboard fallback ───────────────────────────────────────────── */
   document.addEventListener("keydown", e => {
-    if (e.key === "ArrowLeft")  keys.left  = true;
-    if (e.key === "ArrowRight") keys.right = true;
-    if (e.key === "ArrowUp")    keys.gas   = true;
-    if (e.key === "ArrowDown")  keys.brake = true;
+    if (e.key === "ArrowLeft")  keys.left    = true;
+    if (e.key === "ArrowRight") keys.right   = true;
+    if (e.key === "ArrowUp")    keys.gas     = true;
+    if (e.key === "ArrowDown")  keys.reverse = true;
   });
   document.addEventListener("keyup", e => {
-    if (e.key === "ArrowLeft")  keys.left  = false;
-    if (e.key === "ArrowRight") keys.right = false;
-    if (e.key === "ArrowUp")    keys.gas   = false;
-    if (e.key === "ArrowDown")  keys.brake = false;
+    if (e.key === "ArrowLeft")  keys.left    = false;
+    if (e.key === "ArrowRight") keys.right   = false;
+    if (e.key === "ArrowUp")    keys.gas     = false;
+    if (e.key === "ArrowDown")  keys.reverse = false;
   });
 
   return {
