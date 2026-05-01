@@ -6,3 +6,4 @@ ole2026_live/
 .env.*
 *.log
 .DS_Store
+.vercel
