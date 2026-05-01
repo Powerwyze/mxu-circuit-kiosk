@@ -90,7 +90,12 @@ body {
 
 /* ---------- Top bar ---------- */
 .topbar {
-  position: sticky; top: 0;
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
   height: var(--topbar-h);
   display: flex;
   align-items: center;
@@ -147,7 +152,12 @@ body {
 
 /* ---------- Tab bar (top horizontal scroll) ---------- */
 .tabs {
-  position: sticky; top: var(--topbar-h);
+  position: fixed;
+  top: var(--topbar-h);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
   height: var(--tabs-h);
   z-index: 40;
   background: rgba(10,10,10,0.92);
@@ -198,7 +208,7 @@ body {
 }
 .panel {
   display: none;
-  padding: 1.4rem 1.1rem 6rem;
+  padding: calc(var(--topbar-h) + var(--tabs-h) + 1rem) 1.1rem 6rem;
   animation: fade .25s ease;
 }
 .panel.is-active { display: block; }
