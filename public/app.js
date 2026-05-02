@@ -299,14 +299,12 @@ const booth = (() => {
 
   async function captureFlow(){
     clearErr();
-    // Only ask for email the first time; reuse on retake
-    if (!isValidEmail(capturedEmail)) {
-      const email = await emailModal.open();
-      if (!email) return;
-      capturedEmail = email.trim();
-      emailPill.textContent = `📧 ${capturedEmail}`;
-      emailPill.style.display = "block";
-    }
+    // Always ask for email on every Take Photo
+    const email = await emailModal.open();
+    if (!email) return;
+    capturedEmail = email.trim();
+    emailPill.textContent = `📧 ${capturedEmail}`;
+    emailPill.style.display = "block";
     await runCountdown(5);
     flash();
     capture();
