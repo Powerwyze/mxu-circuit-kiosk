@@ -292,7 +292,19 @@ const booth = (() => {
     fd.append("email", capturedEmail);
     try {
       const r = await fetch("/api/banana", { method: "POST", body: fd });
-      if (!r.ok) throw new Error(await r.text() || `HTTP ${r.status}`);
+      if (!r.ok) {
+        const ctype = r.headers.get("content-type") || "";
+        let msg = `HTTP ${r.status}`;
+        if (ctype.includes("application/json")) {
+          try { const j = await r.json(); msg = j.error || j.message || msg; } catch(_) {}
+        } else {
+          // Vercel error pages are HTML — surface a friendly summary instead of raw HTML
+          if (r.status === 504 || r.status === 408) msg = "The portrait took too long to generate. Please try again.";
+          else if (r.status === 502 || r.status === 503) msg = "The image service is busy. Please try again in a moment.";
+          else if (r.status >= 500) msg = "Something went wrong on our end. Please try again.";
+        }
+        throw new Error(msg);
+      }
       const blob = await r.blob();
       generatedBlob = blob;
       generatedMime = blob.type || "image/png";

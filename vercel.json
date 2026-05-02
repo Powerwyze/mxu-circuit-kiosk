@@ -12,7 +12,7 @@
     }
   ],
   "functions": {
-    "api/banana.js":     { "maxDuration": 60 },
+    "api/banana.js":     { "maxDuration": 300 },
     "api/send-photo.js": { "maxDuration": 30 }
   }
 }
