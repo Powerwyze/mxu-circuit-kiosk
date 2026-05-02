@@ -65,44 +65,40 @@
           <div class="home__header">
             <p class="eyebrow">M X U · C I R C U I T</p>
             <h1 class="hero">F1 MIAMI HQ</h1>
-            <p class="home__sub">Powered by our partners. Tap any car to enter.</p>
+            <p class="home__sub">Tap any car to enter.</p>
           </div>
 
-          <div class="home__grid">
-            <aside class="sponsor-rail" id="sponsorRailLeft" aria-label="Sponsors (left)"></aside>
-
-            <div class="home__nav" role="navigation" aria-label="Main sections">
-              <button class="f1nav" data-tab="booth"    aria-label="AI Photo Booth">
-                <svg class="f1nav__car" viewBox="0 0 220 90" aria-hidden="true"><use href="#f1-car"/></svg>
-                <span class="f1nav__label">BOOTH</span>
-                <span class="f1nav__sub">AI Photo</span>
-              </button>
-              <button class="f1nav" data-tab="voice"    aria-label="Voice Concierge">
-                <svg class="f1nav__car" viewBox="0 0 220 90" aria-hidden="true"><use href="#f1-car"/></svg>
-                <span class="f1nav__label">VOICE</span>
-                <span class="f1nav__sub">Concierge</span>
-              </button>
-              <button class="f1nav" data-tab="circuit"  aria-label="Circuit Map">
-                <svg class="f1nav__car" viewBox="0 0 220 90" aria-hidden="true"><use href="#f1-car"/></svg>
-                <span class="f1nav__label">CIRCUIT</span>
-                <span class="f1nav__sub">Map &amp; Info</span>
-              </button>
-              <button class="f1nav" data-tab="fastlap"  aria-label="Fast Lap mini-game">
-                <svg class="f1nav__car" viewBox="0 0 220 90" aria-hidden="true"><use href="#f1-car"/></svg>
-                <span class="f1nav__label">FAST LAP</span>
-                <span class="f1nav__sub">Mini-Game</span>
-              </button>
-              <button class="f1nav" data-tab="discover" aria-label="Discover Miami">
-                <svg class="f1nav__car" viewBox="0 0 220 90" aria-hidden="true"><use href="#f1-car"/></svg>
-                <span class="f1nav__label">DISCOVER</span>
-                <span class="f1nav__sub">Miami</span>
-              </button>
-            </div>
-
-            <aside class="sponsor-rail" id="sponsorRailRight" aria-label="Sponsors (right)"></aside>
+          <div class="home__nav" role="navigation" aria-label="Main sections">
+            <button class="f1nav" data-tab="booth"    aria-label="AI Photo Booth">
+              <svg class="f1nav__car" viewBox="0 0 220 90" aria-hidden="true"><use href="#f1-car"/></svg>
+              <span class="f1nav__label">BOOTH</span>
+              <span class="f1nav__sub">AI Photo</span>
+            </button>
+            <button class="f1nav" data-tab="voice"    aria-label="Voice Concierge">
+              <svg class="f1nav__car" viewBox="0 0 220 90" aria-hidden="true"><use href="#f1-car"/></svg>
+              <span class="f1nav__label">VOICE</span>
+              <span class="f1nav__sub">Concierge</span>
+            </button>
+            <button class="f1nav" data-tab="circuit"  aria-label="Circuit Map">
+              <svg class="f1nav__car" viewBox="0 0 220 90" aria-hidden="true"><use href="#f1-car"/></svg>
+              <span class="f1nav__label">CIRCUIT</span>
+              <span class="f1nav__sub">Map &amp; Info</span>
+            </button>
+            <button class="f1nav" data-tab="fastlap"  aria-label="Fast Lap mini-game">
+              <svg class="f1nav__car" viewBox="0 0 220 90" aria-hidden="true"><use href="#f1-car"/></svg>
+              <span class="f1nav__label">FAST LAP</span>
+              <span class="f1nav__sub">Mini-Game</span>
+            </button>
+            <button class="f1nav" data-tab="discover" aria-label="Discover Miami">
+              <svg class="f1nav__car" viewBox="0 0 220 90" aria-hidden="true"><use href="#f1-car"/></svg>
+              <span class="f1nav__label">DISCOVER</span>
+              <span class="f1nav__sub">Miami</span>
+            </button>
           </div>
 
-          <p class="home__partners-credit">Built on vision. Driven by excellence. — Meet the brands behind the experience.</p>
+          <figure class="home__partners">
+            <img src="/assets/mxu_partners.jpg" alt="MXU Circuit — Proud Partners. Powering Experience." loading="eager" />
+          </figure>
         </div>
       </section>
 
@@ -407,20 +403,6 @@
     <iframe class="iframe-modal__frame" id="iframeFrame" title="External content" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
   </div>
 
-  <!-- ===== Sponsor preview modal ===== -->
-  <div class="smodal" id="sponsorModal" role="dialog" aria-modal="true" aria-labelledby="sponsorModalTitle" aria-hidden="true">
-    <div class="smodal__backdrop" data-smodal-close></div>
-    <div class="smodal__card" role="document">
-      <button class="smodal__close" type="button" aria-label="Close" data-smodal-close>✕</button>
-      <div class="smodal__logo" id="sponsorModalLogo">M</div>
-      <p class="smodal__tag" id="sponsorModalTag"></p>
-      <h2 class="smodal__title" id="sponsorModalTitle">Sponsor</h2>
-      <button class="btn btn--primary" id="sponsorModalLink" type="button">Visit Website ↗</button>
-      <p class="smodal__hint" id="sponsorModalHint"></p>
-    </div>
-  </div>
-
-  <script src="/data/sponsors.js" defer></script>
   <script src="/app.js" defer></script>
 </body>
 </html>

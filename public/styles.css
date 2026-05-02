@@ -1339,14 +1339,22 @@ body {
   margin: 0.6rem 0 0;
 }
 
-.home__grid {
-  display: grid;
-  grid-template-columns: 1fr 1.7fr 1fr;
-  gap: 0.55rem;
-  align-items: stretch;
+.home__partners {
+  margin: 0.6rem 0 0;
+  padding: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+.home__partners img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
-/* ── Sponsor rails ──────────────────────────────────────────────── */
+/* ── Legacy sponsor-rail (unused; kept for backwards compat) ── */
+.sponsor-rail-legacy-unused__placeholder { display: none; }
 .sponsor-rail {
   display: flex;
   flex-direction: column;
@@ -1423,10 +1431,13 @@ body {
 
 /* ── F1 car nav buttons ─────────────────────────────────────────── */
 .home__nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
   padding: 0.25rem 0;
+}
+.home__nav .f1nav:first-child {
+  grid-column: 1 / -1; /* BOOTH spans full width as the hero CTA */
 }
 .f1nav {
   position: relative;
