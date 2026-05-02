@@ -935,4 +935,48 @@ setTimeout(() => {
   activateTab(target);
 }, 0);
 
+/* ─────────────────────  BACKGROUND VIDEO LOOP  ─────────────────────
+   Loops through any number of videos listed in /assets/bg/manifest.json.
+   To add more: drop bg_NN.mp4 into /public/assets/bg/ and append the path
+   to manifest.json's "videos" array. Reduced-motion users see only the
+   static background image (CSS hides .bg__video).
+*/
+(async () => {
+  const v = document.getElementById("bgVideo");
+  if (!v) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  let list = [];
+  try {
+    const res = await fetch("/assets/bg/manifest.json", { cache: "no-cache" });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.videos)) list = data.videos.filter(Boolean);
+    }
+  } catch (_) { /* manifest missing — bail */ }
+  if (!list.length) return;
+
+  let i = 0;
+  function playAt(idx) {
+    v.src = list[idx];
+    const p = v.play();
+    if (p && p.catch) p.catch(() => { /* autoplay block — wait for user gesture */ });
+  }
+  v.addEventListener("loadeddata", () => v.classList.add("is-ready"), { once: true });
+  v.addEventListener("ended", () => {
+    if (list.length === 1) { v.currentTime = 0; v.play().catch(()=>{}); return; }
+    i = (i + 1) % list.length;
+    playAt(i);
+  });
+  // Some browsers fire "ended" only when loop=false, which it is. Also handle the
+  // single-video case via native loop attribute if there's only one to be safe.
+  if (list.length === 1) v.loop = true;
+
+  // Recover from autoplay block on first user interaction
+  const kick = () => { v.play().catch(()=>{}); document.removeEventListener("pointerdown", kick); };
+  document.addEventListener("pointerdown", kick, { once: true });
+
+  playAt(i);
+})();
+
 

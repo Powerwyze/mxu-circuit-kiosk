@@ -32,7 +32,7 @@
 *:focus-visible { outline: 2px solid var(--red-bright); outline-offset: 2px; }
 
 html, body {
-  background: var(--black);
+  background: transparent;
   color: var(--text);
   font-family: var(--body);
   font-weight: 400;
@@ -53,14 +53,27 @@ body {
 
 /* ---------- Background ---------- */
 .bg {
-  position: fixed; inset: 0; z-index: -3;
+  position: fixed; inset: 0; z-index: -4;
   background: var(--black);
 }
 .bg__image {
-  position: fixed; inset: 0; z-index: -2;
+  position: fixed; inset: 0; z-index: -3;
   background: url('assets/mxu_hero_hangar.png') center/cover no-repeat;
   filter: brightness(0.4) saturate(0.85);
   opacity: 0.55;
+}
+.bg__video {
+  position: fixed; inset: 0; z-index: -2;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  filter: brightness(0.45) saturate(0.9);
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+.bg__video.is-ready { opacity: 0.75; }
+@media (prefers-reduced-motion: reduce) {
+  .bg__video { display: none; }
 }
 .bg__grad {
   position: fixed; inset: 0; z-index: -2;
