@@ -88,7 +88,12 @@
             <button class="btn btn--accent"  id="boothGenerate" type="button" hidden>✨ Generate F1 Portrait</button>
           </div>
 
-          <div class="booth__loading" id="boothLoading">Generating your F1 portrait… (≈ 20 s)</div>
+          <div class="booth__loading" id="boothLoading">
+            <video class="booth__loading-video" id="boothLoadingVideo" muted loop playsinline preload="auto" poster="/assets/generating_loop_poster.jpg">
+              <source src="/assets/generating_loop.mp4" type="video/mp4" />
+            </video>
+            <div class="booth__loading-text">Generating your F1 portrait…</div>
+          </div>
           <div class="booth__err"     id="boothErr"></div>
 
           <div class="booth__result" id="boothOut">

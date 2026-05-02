@@ -167,6 +167,19 @@ const booth = (() => {
   const flashEl    = $("#boothFlash");
   const emailPill  = $("#boothEmailPill");
   const loading    = $("#boothLoading");
+  const loadingVideo = $("#boothLoadingVideo");
+
+  function showLoading(on) {
+    loading.style.display = on ? "block" : "none";
+    if (!loadingVideo) return;
+    if (on) {
+      try { loadingVideo.currentTime = 0; } catch(_) {}
+      const p = loadingVideo.play();
+      if (p && typeof p.catch === "function") p.catch(() => { /* autoplay blocked — poster still shows */ });
+    } else {
+      loadingVideo.pause();
+    }
+  }
   const errEl      = $("#boothErr");
   const out        = $("#boothOut");
   const result     = $("#boothResult");
@@ -284,9 +297,9 @@ const booth = (() => {
   async function generate(){
     clearErr();
     out.style.display = "none";
-    loading.style.display = "block";
-    if (!capturedBlob)              { loading.style.display = "none"; showErr("Take a picture first."); return; }
-    if (!isValidEmail(capturedEmail)){ loading.style.display = "none"; showErr("No valid email — please retake."); return; }
+    showLoading(true);
+    if (!capturedBlob)              { showLoading(false); showErr("Take a picture first."); return; }
+    if (!isValidEmail(capturedEmail)){ showLoading(false); showErr("No valid email — please retake."); return; }
     const fd = new FormData();
     fd.append("image", capturedBlob, safeName(capturedEmail) + ".jpg");
     fd.append("email", capturedEmail);
@@ -319,7 +332,7 @@ const booth = (() => {
     } catch (e) {
       showErr(`Failed: ${e.message}`);
     } finally {
-      loading.style.display = "none";
+      showLoading(false);
     }
   }
 
