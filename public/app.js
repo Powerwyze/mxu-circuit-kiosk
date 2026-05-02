@@ -170,7 +170,13 @@ const booth = (() => {
   const loadingVideo = $("#boothLoadingVideo");
 
   function showLoading(on) {
-    loading.style.display = on ? "block" : "none";
+    if (on) {
+      loading.classList.add("is-active");
+      loading.setAttribute("aria-hidden", "false");
+    } else {
+      loading.classList.remove("is-active");
+      loading.setAttribute("aria-hidden", "true");
+    }
     if (!loadingVideo) return;
     if (on) {
       try { loadingVideo.currentTime = 0; } catch(_) {}
@@ -385,7 +391,7 @@ const booth = (() => {
   }
 
   startCamBtn.addEventListener("click",  () => start(false));
-  switchBtn  .addEventListener("click",  () => { facing = facing === "user" ? "environment" : "user"; start(false); });
+  if (switchBtn) switchBtn.addEventListener("click", () => { facing = facing === "user" ? "environment" : "user"; start(false); });
   captureBtn .addEventListener("click",  captureFlow);
   retakeBtn  .addEventListener("click",  retake);
   generateBtn.addEventListener("click",  generate);

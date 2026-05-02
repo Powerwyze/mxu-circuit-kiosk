@@ -404,37 +404,83 @@ body {
   letter-spacing: 0.06em;
   word-break: break-all;
 }
+/* Booth hero image (top of booth tab) — small thumbnail */
+.booth__hero {
+  margin: 0 auto 0.7rem;
+  width: 180px;
+  max-width: 50%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 8px 24px rgba(225, 6, 0, 0.22), 0 0 0 1px rgba(225,6,0,0.3) inset;
+}
+.booth__hero img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Big neon heading */
+.booth__neon {
+  text-align: center;
+  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow:
+    0 0 6px rgba(255, 30, 30, 0.95),
+    0 0 14px rgba(225, 6, 0, 0.85),
+    0 0 28px rgba(225, 6, 0, 0.55),
+    0 0 56px rgba(225, 6, 0, 0.35);
+  margin: 0.4rem 0 0.9rem;
+  animation: neonPulse 2.6s ease-in-out infinite;
+}
+@keyframes neonPulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.15); }
+}
+
+.booth__how--top {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+/* Full-screen loading overlay — video plays over middle of screen */
 .booth__loading {
   display: none;
-  position: relative;
-  overflow: hidden;
-  border: 1px dashed var(--line-strong);
-  border-radius: 14px;
-  background: #000;
-  aspect-ratio: 9 / 16;
-  max-height: 480px;
-  width: 100%;
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.92);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 1rem;
+}
+.booth__loading.is-active {
+  display: flex;
 }
 .booth__loading-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  width: min(86vw, 420px);
+  max-height: 60vh;
+  aspect-ratio: 9 / 16;
   object-fit: cover;
-  display: block;
+  border-radius: 18px;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 0 60px rgba(225, 6, 0, 0.45), 0 0 120px rgba(225, 6, 0, 0.25);
+  background: #000;
 }
 .booth__loading-text {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  padding: 0.85rem 1rem;
-  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.85) 60%);
+  margin-top: 1.4rem;
   font-family: var(--mono);
-  font-size: 0.78rem;
-  color: var(--red-bright);
-  letter-spacing: 0.18em;
+  font-size: 0.95rem;
+  color: #fff;
+  letter-spacing: 0.22em;
   text-align: center;
   text-transform: uppercase;
-  text-shadow: 0 0 18px rgba(225,6,0,0.45);
+  text-shadow:
+    0 0 8px rgba(255, 30, 30, 0.95),
+    0 0 22px rgba(225, 6, 0, 0.7);
 }
 .booth__loading-text::after {
   content: "";

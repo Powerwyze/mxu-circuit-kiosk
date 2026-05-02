@@ -134,9 +134,19 @@
       </svg>
 
       <section class="panel" data-panel="booth" aria-hidden="true">
-        <div class="panel-eyebrow">MXU AI · F1 Miami</div>
-        <h1 class="panel-title">AI Photo Booth</h1>
-        <p class="panel-lede">Snap a portrait. We'll restyle you as an F1 driver in the MXU Jet Hangar — and email the souvenir to you.</p>
+        <figure class="booth__hero">
+          <img src="/assets/booth_hero.jpg" alt="MXU F1 driver portrait sample" loading="eager" />
+        </figure>
+        <h1 class="panel-title booth__neon">Come get a F1 picture of yourself</h1>
+
+        <div class="booth__how booth__how--top">
+          <ol>
+            <li>Tap <strong>Take Photo</strong> and enter your email</li>
+            <li>5-second countdown · capture portrait</li>
+            <li>Tap <strong>Generate</strong> · AI restyles you as an F1 driver</li>
+            <li>Tap <strong>Send to my email</strong> — souvenir delivered</li>
+          </ol>
+        </div>
 
         <div class="booth">
           <div class="booth__cam-wrap">
@@ -157,18 +167,11 @@
 
           <div class="booth__row">
             <button class="btn btn--ghost"   id="boothStart"  type="button">Start Camera</button>
-            <button class="btn btn--ghost"   id="boothSwitch" type="button">Switch</button>
             <button class="btn btn--primary btn--block" id="boothCapture" type="button">📸 Take Photo</button>
             <button class="btn btn--ghost"   id="boothRetake" type="button" hidden>Retake</button>
             <button class="btn btn--accent"  id="boothGenerate" type="button" hidden>✨ Generate F1 Portrait</button>
           </div>
 
-          <div class="booth__loading" id="boothLoading">
-            <video class="booth__loading-video" id="boothLoadingVideo" muted loop playsinline preload="auto" poster="/assets/generating_loop_poster.jpg">
-              <source src="/assets/generating_loop.mp4" type="video/mp4" />
-            </video>
-            <div class="booth__loading-text">Generating your F1 portrait…</div>
-          </div>
           <div class="booth__err"     id="boothErr"></div>
 
           <div class="booth__result" id="boothOut">
@@ -176,16 +179,14 @@
             <button class="btn btn--primary btn--block" id="boothEmail" type="button">📩 Send to my email</button>
             <div class="booth__email-status" id="boothEmailStatus"></div>
           </div>
+        </div>
 
-          <div class="booth__how">
-            <h3>How it works</h3>
-            <ol>
-              <li>Tap <strong>Take Photo</strong> and enter your email</li>
-              <li>5-second countdown · capture portrait</li>
-              <li>Tap <strong>Generate</strong> · AI restyles you as an F1 driver</li>
-              <li>Tap <strong>Send to my email</strong> — souvenir delivered</li>
-            </ol>
-          </div>
+        <!-- Full-screen loading overlay shown while AI generates -->
+        <div class="booth__loading" id="boothLoading" aria-hidden="true" role="status">
+          <video class="booth__loading-video" id="boothLoadingVideo" muted loop playsinline preload="auto" poster="/assets/generating_loop_poster.jpg">
+            <source src="/assets/generating_loop.mp4" type="video/mp4" />
+          </video>
+          <div class="booth__loading-text">Your image is generating</div>
         </div>
       </section>
 
