@@ -587,9 +587,9 @@ const fastlap = (() => {
     ctx.lineWidth = TRACK_W * 2 + 4;
     ctx.strokeStyle = "#fff";
     ctx.stroke();
-    // Asphalt
+    // Asphalt (light grey)
     ctx.lineWidth = TRACK_W * 2;
-    ctx.strokeStyle = "#1a1a1d";
+    ctx.strokeStyle = "#b9bcc3";
     ctx.stroke();
     // Centerline dashes
     ctx.lineWidth = 3;
