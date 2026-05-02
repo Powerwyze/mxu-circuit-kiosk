@@ -382,6 +382,7 @@ const voice = (() => {
   const panel     = $("#voicePanel");
 
   let convo = null, ConvoClass = null;
+  let connecting = false; // guards against double-start (orb + button race)
 
   async function loadConvai(){
     if (ConvoClass) return ConvoClass;
@@ -402,51 +403,87 @@ const voice = (() => {
   function setStatus(m){ statusEl.innerHTML = m; }
   function setActive(on){
     panel.classList.toggle("is-listening", on);
-    startBtn.disabled = on;
+    startBtn.disabled = on || connecting;
     stopBtn.disabled  = !on;
+    orb.classList.toggle("is-active", on);
+    orb.classList.toggle("is-connecting", connecting);
   }
 
-  startBtn.addEventListener("click", async () => {
+  async function startVoice(){
+    // Hard guard: only ONE session can ever be in flight.
+    if (convo || connecting) return;
+    connecting = true;
+    startBtn.disabled = true;
+    orb.classList.add("is-connecting");
     setStatus("Connecting…");
+
     const Conversation = await loadConvai();
-    if (!Conversation) { setStatus("Could not load voice SDK. Check your connection."); return; }
+    if (!Conversation) {
+      connecting = false;
+      orb.classList.remove("is-connecting");
+      startBtn.disabled = false;
+      setStatus("Could not load voice SDK. Check your connection.");
+      return;
+    }
     try {
       if (navigator.mediaDevices?.getUserMedia) {
         await navigator.mediaDevices.getUserMedia({ audio: true });
       }
-    } catch (e) { setStatus("Microphone permission is required."); return; }
+    } catch (e) {
+      connecting = false;
+      orb.classList.remove("is-connecting");
+      startBtn.disabled = false;
+      setStatus("Microphone permission is required.");
+      return;
+    }
     try {
-      convo = await Conversation.startSession({
+      const session = await Conversation.startSession({
         agentId: AGENT_ID,
         connectionType: "websocket",
-        onConnect:    () => { setActive(true);  setStatus("Connected. Speak whenever you like."); },
-        onDisconnect: () => { setActive(false); setStatus("Conversation ended."); },
-        onError:      (err) => { console.error(err); setStatus("Something went wrong. Tap Start to retry."); setActive(false); },
+        onConnect:    () => { connecting = false; setActive(true);  setStatus("Connected. Speak whenever you like."); },
+        onDisconnect: () => { convo = null; connecting = false; setActive(false); setStatus("Conversation ended. Tap <strong>Start</strong> to begin again."); },
+        onError:      (err) => { console.error(err); convo = null; connecting = false; setActive(false); setStatus("Something went wrong. Tap Start to retry."); },
         onModeChange: m => {
           const mode = (m && m.mode) || m;
           if      (mode === "speaking")  setStatus("🔊 Concierge speaking…");
           else if (mode === "listening") setStatus("🎙️ Listening…");
         },
       });
+      // If a parallel call already created a convo, end this duplicate.
+      if (convo) { try { await session.endSession(); } catch (_) {} return; }
+      convo = session;
     } catch (e) {
       console.error(e);
-      setStatus("Could not start the voice agent. Please try again.");
+      connecting = false;
       setActive(false);
+      setStatus("Could not start the voice agent. Please try again.");
     }
-  });
+  }
 
-  stopBtn.addEventListener("click", async () => {
+  async function stopVoice(){
     if (convo) { try { await convo.endSession(); } catch (_) {} convo = null; }
+    connecting = false;
     setActive(false);
     setStatus("Tap <strong>Start</strong> to begin again.");
-  });
+  }
 
-  // Tap orb = start
-  orb.addEventListener("click", () => { if (!startBtn.disabled) startBtn.click(); });
+  startBtn.addEventListener("click", startVoice);
+  stopBtn .addEventListener("click", stopVoice);
+
+  // Orb tap toggles: start if idle, stop if active. Never double-fires.
+  orb.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (convo)            { stopVoice();  return; }
+    if (connecting)       { return; }
+    startVoice();
+  });
 
   return {
     onHide: async () => {
-      if (convo) { try { await convo.endSession(); } catch (_) {} convo = null; setActive(false); }
+      if (convo) { try { await convo.endSession(); } catch (_) {} convo = null; }
+      connecting = false;
+      setActive(false);
     },
   };
 })();
