@@ -48,8 +48,8 @@ module.exports = async function handler(req, res){
   if (!apiKey) { res.statusCode = 500; return res.end("OPENAI_API_KEY not configured"); }
 
   const model    = process.env.OPENAI_IMAGE_MODEL   || "gpt-image-1";
-  const size     = process.env.OPENAI_IMAGE_SIZE    || "1024x1536";
-  const quality  = process.env.OPENAI_IMAGE_QUALITY || "medium";
+  const size     = process.env.OPENAI_IMAGE_SIZE    || "1024x1024";
+  const quality  = process.env.OPENAI_IMAGE_QUALITY || "low";
 
   // Parse multipart
   let imagePath = null, email = "";
@@ -77,11 +77,15 @@ module.exports = async function handler(req, res){
     fd.append("n",       "1");
     fd.append("image",   new Blob([fileBuf], { type: "image/jpeg" }), "input.jpg");
 
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 50000);
     upstream = await fetch(OPENAI_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}` },
       body: fd,
+      signal: controller.signal,
     });
+    clearTimeout(t);
   } catch (e) {
     console.error("openai fetch error", e);
     res.statusCode = 502; return res.end("Upstream error: " + e.message);
