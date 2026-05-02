@@ -77,8 +77,10 @@ module.exports = async function handler(req, res){
     fd.append("n",       "1");
     fd.append("image",   new Blob([fileBuf], { type: "image/jpeg" }), "input.jpg");
 
+    // gpt-image-2 generation can take 60-180s. Match Vercel function timeout (300s)
+    // with a small safety margin so the upstream error surfaces before Vercel kills us.
     const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 50000);
+    const t = setTimeout(() => controller.abort(), 280000);
     upstream = await fetch(OPENAI_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}` },
