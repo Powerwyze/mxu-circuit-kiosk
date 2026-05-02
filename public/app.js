@@ -166,31 +166,46 @@ const booth = (() => {
   const countdown  = $("#boothCountdown");
   const flashEl    = $("#boothFlash");
   const emailPill  = $("#boothEmailPill");
-  const loading    = $("#boothLoading");
-  const loadingVideo = $("#boothLoadingVideo");
+  // Floating pill shown during generation (while user plays Fast Lap)
+  const genPill    = $("#genPill");
+  // Result modal (shown when generation finishes)
+  const resModal     = $("#resModal");
+  const resModalImg  = $("#resModalImg");
+  const resModalSend = $("#resModalSend");
+  const resModalStat = $("#resModalStatus");
+  const resModalHint = $("#resModalHint");
 
-  function showLoading(on) {
+  let resAutoCloseTimer = null;
+
+  function showGenPill(on) {
+    if (!genPill) return;
     if (on) {
-      loading.classList.add("is-active");
-      loading.setAttribute("aria-hidden", "false");
+      genPill.classList.add("is-active");
+      genPill.setAttribute("aria-hidden", "false");
     } else {
-      loading.classList.remove("is-active");
-      loading.setAttribute("aria-hidden", "true");
-    }
-    if (!loadingVideo) return;
-    if (on) {
-      try { loadingVideo.currentTime = 0; } catch(_) {}
-      const p = loadingVideo.play();
-      if (p && typeof p.catch === "function") p.catch(() => { /* autoplay blocked — poster still shows */ });
-    } else {
-      loadingVideo.pause();
+      genPill.classList.remove("is-active");
+      genPill.setAttribute("aria-hidden", "true");
     }
   }
+
+  function openResModal(){
+    resModal.classList.add("is-open");
+    resModal.setAttribute("aria-hidden", "false");
+  }
+  function closeResModal(){
+    resModal.classList.remove("is-open");
+    resModal.setAttribute("aria-hidden", "true");
+    if (resAutoCloseTimer) { clearTimeout(resAutoCloseTimer); resAutoCloseTimer = null; }
+    // Return to camera view inside the booth tab
+    capturedBlob = null;
+    hide(preview); show(cam);
+    hide(retakeBtn); hide(generateBtn);
+    if (emailPill) emailPill.style.display = "none";
+    // Make sure user is on the booth tab so they see the camera
+    activateTab("booth");
+  }
+
   const errEl      = $("#boothErr");
-  const out        = $("#boothOut");
-  const result     = $("#boothResult");
-  const emailBtn   = $("#boothEmail");
-  const emailStat  = $("#boothEmailStatus");
 
   let stream = null, capturedBlob = null, capturedEmail = "", facing = "user";
   let generatedBlob = null, generatedMime = "image/png";
@@ -284,17 +299,21 @@ const booth = (() => {
 
   async function captureFlow(){
     clearErr();
-    const email = await emailModal.open();
-    if (!email) return;
-    capturedEmail = email.trim();
-    emailPill.textContent = `📧 ${capturedEmail}`;
-    emailPill.style.display = "block";
+    // Only ask for email the first time; reuse on retake
+    if (!isValidEmail(capturedEmail)) {
+      const email = await emailModal.open();
+      if (!email) return;
+      capturedEmail = email.trim();
+      emailPill.textContent = `📧 ${capturedEmail}`;
+      emailPill.style.display = "block";
+    }
     await runCountdown(5);
     flash();
     capture();
   }
 
   function retake(){
+    // Keep capturedEmail intact — don't re-prompt
     capturedBlob = null;
     hide(preview); show(cam);
     hide(retakeBtn); hide(generateBtn);
@@ -302,10 +321,16 @@ const booth = (() => {
 
   async function generate(){
     clearErr();
-    out.style.display = "none";
-    showLoading(true);
-    if (!capturedBlob)              { showLoading(false); showErr("Take a picture first."); return; }
-    if (!isValidEmail(capturedEmail)){ showLoading(false); showErr("No valid email — please retake."); return; }
+    if (!capturedBlob)              { showErr("Take a picture first."); return; }
+    if (!isValidEmail(capturedEmail)){ showErr("No valid email — please retake."); return; }
+
+    // Hide the email pill once generation kicks off
+    if (emailPill) emailPill.style.display = "none";
+
+    // Show floating “generating” pill and switch to Fast Lap so the user can play
+    showGenPill(true);
+    activateTab("fastlap");
+
     const fd = new FormData();
     fd.append("image", capturedBlob, safeName(capturedEmail) + ".jpg");
     fd.append("email", capturedEmail);
@@ -317,7 +342,6 @@ const booth = (() => {
         if (ctype.includes("application/json")) {
           try { const j = await r.json(); msg = j.error || j.message || msg; } catch(_) {}
         } else {
-          // Vercel error pages are HTML — surface a friendly summary instead of raw HTML
           if (r.status === 504 || r.status === 408) msg = "The portrait took too long to generate. Please try again.";
           else if (r.status === 502 || r.status === 503) msg = "The image service is busy. Please try again in a moment.";
           else if (r.status >= 500) msg = "Something went wrong on our end. Please try again.";
@@ -327,18 +351,18 @@ const booth = (() => {
       const blob = await r.blob();
       generatedBlob = blob;
       generatedMime = blob.type || "image/png";
-      result.src = URL.createObjectURL(blob);
-      emailStat.textContent = "";
-      out.style.display = "block";
-      // Reset capture state but keep result visible for next guest
-      capturedBlob = null;
-      hide(preview); show(cam);
-      hide(retakeBtn); hide(generateBtn);
-      await start();
+      resModalImg.src = URL.createObjectURL(blob);
+      resModalStat.textContent = "";
+      resModalSend.disabled = false;
+      resModalSend.textContent = "📩 Send to my email";
+      // Pop the result modal on top of whatever tab they’re on
+      openResModal();
     } catch (e) {
       showErr(`Failed: ${e.message}`);
+      // Send them back to the booth to see the error
+      activateTab("booth");
     } finally {
-      showLoading(false);
+      showGenPill(false);
     }
   }
 
@@ -364,11 +388,10 @@ const booth = (() => {
   }
 
   async function sendEmail(){
-    clearErr();
-    if (!generatedBlob)              { showErr("Generate a portrait first."); return; }
-    if (!isValidEmail(capturedEmail)){ showErr("No valid email saved.");      return; }
-    emailStat.textContent = "Sending…";
-    emailBtn.disabled = true;
+    if (!generatedBlob)              { resModalStat.textContent = "Generate a portrait first."; return; }
+    if (!isValidEmail(capturedEmail)){ resModalStat.textContent = "No valid email saved.";      return; }
+    resModalStat.textContent = "Sending…";
+    resModalSend.disabled = true;
     try {
       const { b64, mimeType } = await compress(generatedBlob);
       const r = await fetch("/api/send-photo", {
@@ -382,11 +405,14 @@ const booth = (() => {
         }),
       });
       if (!r.ok) throw new Error(await r.text() || `HTTP ${r.status}`);
-      emailStat.textContent = "✅ Sent. Check your inbox.";
+      resModalStat.textContent = "✅ Sent. Returning in 30s…";
+      resModalSend.textContent = "✅ Sent";
+      // After Send, hold the result on screen 30 more seconds, then return to camera
+      if (resAutoCloseTimer) clearTimeout(resAutoCloseTimer);
+      resAutoCloseTimer = setTimeout(() => closeResModal(), 30000);
     } catch (e) {
-      emailStat.textContent = `Send failed: ${e.message}`;
-    } finally {
-      emailBtn.disabled = false;
+      resModalStat.textContent = `Send failed: ${e.message}`;
+      resModalSend.disabled = false;
     }
   }
 
@@ -395,7 +421,11 @@ const booth = (() => {
   captureBtn .addEventListener("click",  captureFlow);
   retakeBtn  .addEventListener("click",  retake);
   generateBtn.addEventListener("click",  generate);
-  emailBtn   .addEventListener("click",  sendEmail);
+  resModalSend.addEventListener("click", sendEmail);
+  // Tap on backdrop dismisses the modal (panel itself doesn't propagate)
+  resModal.addEventListener("click", (e) => {
+    if (e.target === resModal) closeResModal();
+  });
 
   return {
     onShow: () => { if (navigator.mediaDevices?.getUserMedia) start(); },

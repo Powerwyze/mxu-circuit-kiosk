@@ -174,21 +174,25 @@
 
           <div class="booth__err"     id="boothErr"></div>
 
-          <div class="booth__result" id="boothOut">
-            <img id="boothResult" alt="Generated F1 portrait" />
-            <button class="btn btn--primary btn--block" id="boothEmail" type="button">📩 Send to my email</button>
-            <div class="booth__email-status" id="boothEmailStatus"></div>
-          </div>
-        </div>
-
-        <!-- Full-screen loading overlay shown while AI generates -->
-        <div class="booth__loading" id="boothLoading" aria-hidden="true" role="status">
-          <video class="booth__loading-video" id="boothLoadingVideo" muted loop playsinline preload="auto" poster="/assets/generating_loop_poster.jpg">
-            <source src="/assets/generating_loop.mp4" type="video/mp4" />
-          </video>
-          <div class="booth__loading-text">Your image is generating</div>
         </div>
       </section>
+
+      <!-- Floating “generating” pill shown while user plays Fast Lap -->
+      <div class="genpill" id="genPill" aria-hidden="true" role="status">
+        <span class="genpill__spinner" aria-hidden="true"></span>
+        <span class="genpill__text">Generating… play while you wait</span>
+      </div>
+
+      <!-- Result modal (shown when generation completes) -->
+      <div class="resmodal" id="resModal" aria-hidden="true" role="dialog" aria-labelledby="resModalTitle">
+        <div class="resmodal__panel">
+          <div class="resmodal__title" id="resModalTitle">Your F1 portrait is ready</div>
+          <img class="resmodal__img" id="resModalImg" alt="Generated F1 portrait" />
+          <button class="btn btn--primary btn--block" id="resModalSend" type="button">📩 Send to my email</button>
+          <div class="resmodal__status" id="resModalStatus"></div>
+          <div class="resmodal__hint" id="resModalHint">Tap anywhere to dismiss</div>
+        </div>
+      </div>
 
       <!-- ░░ Email modal (replaces prompt) ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
       <div class="modal" id="emailModal" aria-hidden="true" role="dialog" aria-labelledby="emailModalTitle">
