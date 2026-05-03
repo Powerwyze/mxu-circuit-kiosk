@@ -196,12 +196,13 @@ const booth = (() => {
     resModal.classList.remove("is-open");
     resModal.setAttribute("aria-hidden", "true");
     if (resAutoCloseTimer) { clearTimeout(resAutoCloseTimer); resAutoCloseTimer = null; }
-    // Return to camera view inside the booth tab
+    // New session: reset capture and email state so next guest gets a fresh prompt
     capturedBlob = null;
+    capturedEmail = "";
+    isRetake = false;
     hide(preview); show(cam);
     hide(retakeBtn); hide(generateBtn);
     if (emailPill) emailPill.style.display = "none";
-    // Make sure user is on the booth tab so they see the camera
     activateTab("booth");
   }
 
@@ -297,21 +298,29 @@ const booth = (() => {
     }, "image/jpeg", 0.95);
   }
 
+  // Tracks whether the next captureFlow is a retake of the same person
+  let isRetake = false;
+
   async function captureFlow(){
     clearErr();
-    // Always ask for email on every Take Photo
-    const email = await emailModal.open();
-    if (!email) return;
-    capturedEmail = email.trim();
-    emailPill.textContent = `📧 ${capturedEmail}`;
-    emailPill.style.display = "block";
+    // Ask for email only on the first Take Photo of the session.
+    // Retake reuses the previously entered email.
+    if (!isRetake || !isValidEmail(capturedEmail)) {
+      const email = await emailModal.open();
+      if (!email) return;
+      capturedEmail = email.trim();
+      emailPill.textContent = `📧 ${capturedEmail}`;
+      emailPill.style.display = "block";
+    }
+    isRetake = false; // consumed
     await runCountdown(5);
     flash();
     capture();
   }
 
   function retake(){
-    // Keep capturedEmail intact — don't re-prompt
+    // Mark next capture as a retake so we skip the email prompt
+    isRetake = true;
     capturedBlob = null;
     hide(preview); show(cam);
     hide(retakeBtn); hide(generateBtn);
