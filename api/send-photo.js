@@ -68,14 +68,23 @@ module.exports = async function handler(req, res){
 
   const html = `<!doctype html><html><body style="font-family:system-ui,Inter,Arial,sans-serif;background:#0a0a0c;color:#f4f4f5;padding:24px">
     <div style="max-width:560px;margin:0 auto;background:#111114;border:1px solid #2a2a2e;border-radius:16px;overflow:hidden">
-      <div style="padding:22px 24px;border-bottom:1px solid #2a2a2e;display:flex;align-items:center;gap:10px">
-        <div style="width:32px;height:32px;background:#e10600;border-radius:8px;display:inline-block"></div>
-        <strong style="font-size:18px;letter-spacing:0.04em">MXU · CIRCUIT</strong>
+      <div style="padding:22px 24px;border-bottom:1px solid #2a2a2e">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td style="width:32px;height:32px;background:#e10600;border-radius:8px;"></td>
+          <td style="padding-left:12px;font-size:18px;letter-spacing:0.04em;font-weight:700;color:#f4f4f5">MXU · CIRCUIT</td>
+        </tr></table>
       </div>
       <div style="padding:24px">
-        <h1 style="margin:0 0 8px 0;font-size:24px">Your F1 Miami portrait is ready</h1>
-        <p style="margin:0 0 16px 0;color:#a1a1aa;line-height:1.55">Thanks for stopping by the MXU AI Photo Booth at F1 Miami. Your souvenir is attached. See you on the grid.</p>
-        <p style="margin:0;color:#71717a;font-size:13px">— ${fromName}</p>
+        <h1 style="margin:0 0 8px 0;font-size:24px;color:#f4f4f5">Your F1 Miami portrait is ready 🏁</h1>
+        <p style="margin:0 0 18px 0;color:#a1a1aa;line-height:1.55">Thanks for stopping by the MXU AI Photo Booth at F1 Miami. Your souvenir is attached — see you on the grid.</p>
+
+        <div style="margin:18px 0;padding:18px 20px;background:linear-gradient(135deg,#1a0306 0%,#2a0a0a 100%);border:1px solid #e10600;border-radius:12px">
+          <div style="font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#ff6b6b;margin-bottom:8px;font-weight:700">📸 Share the moment</div>
+          <p style="margin:0 0 12px 0;color:#f4f4f5;font-size:15px;line-height:1.5">Post your portrait on Instagram and tag <strong style="color:#ff3030">@powerwyze</strong> — we'll be reposting our favorites all weekend.</p>
+          <a href="https://instagram.com/powerwyze" style="display:inline-block;background:#e10600;color:#fff;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:0.06em;padding:10px 18px;border-radius:8px">Tag @powerwyze on Instagram →</a>
+        </div>
+
+        <p style="margin:18px 0 0 0;color:#71717a;font-size:13px">— ${fromName}</p>
       </div>
     </div>
   </body></html>`;
@@ -85,7 +94,7 @@ module.exports = async function handler(req, res){
       from: `"${fromName}" <${user}>`,
       to: email,
       subject: "Your MXU F1 Miami portrait 🏁",
-      text: "Your F1 Miami portrait from the MXU AI Photo Booth is attached. See you on the grid.",
+      text: "Your F1 Miami portrait from the MXU AI Photo Booth is attached.\n\nShare the moment: post your portrait on Instagram and tag @powerwyze \u2014 we'll be reposting our favorites all weekend.\n\nhttps://instagram.com/powerwyze\n\nSee you on the grid.",
       html,
       attachments: [{
         filename: safeFilename,
