@@ -1744,39 +1744,54 @@ body {
 .genpill {
   display: none;
   position: fixed;
-  top: calc(var(--topbar-h) + var(--tabs-h) + 0.5rem);
+  top: calc(var(--topbar-h) + var(--tabs-h) + 0.6rem);
   left: 50%;
   transform: translateX(-50%);
   z-index: 7000;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.55rem 0.95rem;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(225,6,0,0.95) 0%, rgba(150,0,0,0.95) 100%);
-  border: 1px solid rgba(255,255,255,0.2);
-  box-shadow: 0 8px 24px rgba(225, 6, 0, 0.4), 0 0 32px rgba(225, 6, 0, 0.35);
+  gap: 0.85rem;
+  padding: 0.85rem 1.2rem;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(225,6,0,0.96) 0%, rgba(150,0,0,0.96) 100%);
+  border: 1.5px solid rgba(255,255,255,0.28);
+  box-shadow: 0 10px 30px rgba(225, 6, 0, 0.5), 0 0 44px rgba(225, 6, 0, 0.45);
   color: #fff;
   font-family: var(--mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.12em;
+  font-size: 0.88rem;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  text-shadow: 0 0 6px rgba(0,0,0,0.5);
-  max-width: calc(100vw - 1rem);
-  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(0,0,0,0.55);
+  width: calc(100vw - 1.2rem);
+  max-width: 360px;
+  text-align: left;
   pointer-events: none;
+  animation: genpill-pulse 1.8s ease-in-out infinite;
 }
 .genpill.is-active { display: inline-flex; }
 .genpill__spinner {
-  width: 14px; height: 14px;
+  width: 26px; height: 26px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.35);
+  border: 3px solid rgba(255,255,255,0.35);
   border-top-color: #fff;
   animation: genspin 0.9s linear infinite;
   flex: 0 0 auto;
 }
 .genpill__text {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: inline-block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.genpill__text strong {
+  display: block;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  margin-top: 0.18rem;
+  white-space: nowrap;
+}
+@keyframes genpill-pulse {
+  0%, 100% { box-shadow: 0 10px 30px rgba(225, 6, 0, 0.5), 0 0 44px rgba(225, 6, 0, 0.45); }
+  50%      { box-shadow: 0 10px 34px rgba(225, 6, 0, 0.7), 0 0 64px rgba(225, 6, 0, 0.7); }
 }
 @keyframes genspin { to { transform: rotate(360deg); } }
 
