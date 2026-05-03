@@ -156,26 +156,17 @@ const emailModal = (() => {
 
 const booth = (() => {
   const cam        = $("#boothCam");
-  const preview    = $("#boothPreview");
   const canvas     = $("#boothCanvas");
   const startCamBtn= $("#boothStart");
   const switchBtn  = $("#boothSwitch");
   const captureBtn = $("#boothCapture");
-  const retakeBtn  = $("#boothRetake");
-  const generateBtn= $("#boothGenerate");
   const countdown  = $("#boothCountdown");
   const flashEl    = $("#boothFlash");
-  const emailPill  = $("#boothEmailPill");
-  // Floating pill shown during generation (while user plays Fast Lap)
+  // Floating pill shown during generation (mirrors job queue state)
   const genPill    = $("#genPill");
-  // Result modal (shown when generation finishes)
-  const resModal     = $("#resModal");
-  const resModalImg  = $("#resModalImg");
-  const resModalSend = $("#resModalSend");
-  const resModalStat = $("#resModalStatus");
-  const resModalHint = $("#resModalHint");
 
-  let resAutoCloseTimer = null;
+  // Legacy elements kept hidden — still in DOM but unused in the multi-person flow
+  // (preview, retake/generate buttons, result modal, email pill)
 
   function showGenPill(on) {
     if (!genPill) return;
@@ -188,28 +179,49 @@ const booth = (() => {
     }
   }
 
-  function openResModal(){
-    resModal.classList.add("is-open");
-    resModal.setAttribute("aria-hidden", "false");
+  // ─── Toast notifications (used for multi-person delivery confirmations) ────
+  const toaster = $("#toaster");
+  function toast(msg, { duration = 6000, kind = "info" } = {}){
+    if (!toaster) return;
+    const el = document.createElement("div");
+    el.className = `toast toast--${kind}`;
+    el.innerHTML = msg;
+    toaster.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("is-in"));
+    setTimeout(() => {
+      el.classList.remove("is-in");
+      el.classList.add("is-out");
+      setTimeout(() => el.remove(), 400);
+    }, duration);
   }
-  function closeResModal(){
-    resModal.classList.remove("is-open");
-    resModal.setAttribute("aria-hidden", "true");
-    if (resAutoCloseTimer) { clearTimeout(resAutoCloseTimer); resAutoCloseTimer = null; }
-    // New session: reset capture and email state so next guest gets a fresh prompt
-    capturedBlob = null;
-    capturedEmail = "";
-    isRetake = false;
-    hide(preview); show(cam);
-    hide(retakeBtn); hide(generateBtn);
-    if (emailPill) emailPill.style.display = "none";
-    activateTab("booth");
+
+  // ─── Job queue (so several guests can have portraits generating at once) ──
+  const boothQueueEl = $("#boothQueue");
+  let nextJobId = 1;
+  const jobs = new Map(); // jobId -> { blob, email, status, request }
+
+  function renderQueue(){
+    if (!boothQueueEl) return;
+    const inflight = Array.from(jobs.values()).filter(j => j.status === "generating" || j.status === "sending" || j.status === "awaiting-email").length;
+    if (inflight === 0) {
+      boothQueueEl.style.display = "none";
+      boothQueueEl.setAttribute("aria-hidden", "true");
+      boothQueueEl.textContent = "";
+    } else {
+      const label = inflight === 1
+        ? "⚡ 1 portrait generating…"
+        : `⚡ ${inflight} portraits generating…`;
+      boothQueueEl.textContent = label;
+      boothQueueEl.style.display = "inline-flex";
+      boothQueueEl.setAttribute("aria-hidden", "false");
+    }
+    // Genpill mirrors the inflight state so it shows up on Fast Lap too
+    showGenPill(inflight > 0);
   }
 
   const errEl      = $("#boothErr");
 
-  let stream = null, capturedBlob = null, capturedEmail = "", facing = "user";
-  let generatedBlob = null, generatedMime = "image/png";
+  let stream = null, facing = "user";
 
   const isValidEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   const safeName = e => e.trim().toLowerCase().replace(/[^a-z0-9@._-]/g,"_").replace(/@/g,"_at_");
@@ -257,8 +269,7 @@ const booth = (() => {
         if (booted) break;
       }
       if (!booted) throw lastErr || new Error("Unable to access camera");
-      show(cam); hide(preview);
-      hide(retakeBtn); hide(generateBtn);
+      show(cam);
     } catch (e) {
       if (autoFlip) { facing = facing === "user" ? "environment" : "user"; return start(false); }
       showErr(`Camera unavailable. Tap Switch then Start Camera. (${e.message})`);
@@ -281,98 +292,24 @@ const booth = (() => {
     setTimeout(() => flashEl.classList.remove("on"), 170);
   }
 
-  function capture(){
-    if (!cam.videoWidth || !cam.videoHeight){
-      showErr("Camera is not ready yet. Wait a moment and try again.");
-      return;
-    }
-    canvas.width = cam.videoWidth;
-    canvas.height = cam.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(cam, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(blob => {
-      capturedBlob = blob;
-      preview.src = URL.createObjectURL(blob);
-      hide(cam); show(preview);
-      show(retakeBtn); show(generateBtn);
-    }, "image/jpeg", 0.95);
-  }
-
-  // Tracks whether the next captureFlow is a retake of the same person
-  let isRetake = false;
-
-  async function captureFlow(){
-    clearErr();
-    // Ask for email only on the first Take Photo of the session.
-    // Retake reuses the previously entered email.
-    if (!isRetake || !isValidEmail(capturedEmail)) {
-      const email = await emailModal.open();
-      if (!email) return;
-      capturedEmail = email.trim();
-      emailPill.textContent = `📧 ${capturedEmail}`;
-      emailPill.style.display = "block";
-    }
-    isRetake = false; // consumed
-    await runCountdown(5);
-    flash();
-    capture();
-  }
-
-  function retake(){
-    // Mark next capture as a retake so we skip the email prompt
-    isRetake = true;
-    capturedBlob = null;
-    hide(preview); show(cam);
-    hide(retakeBtn); hide(generateBtn);
-  }
-
-  async function generate(){
-    clearErr();
-    if (!capturedBlob)              { showErr("Take a picture first."); return; }
-    if (!isValidEmail(capturedEmail)){ showErr("No valid email — please retake."); return; }
-
-    // Hide the email pill once generation kicks off
-    if (emailPill) emailPill.style.display = "none";
-
-    // Show floating “generating” pill and switch to Fast Lap so the user can play
-    showGenPill(true);
-    activateTab("fastlap");
-
-    const fd = new FormData();
-    fd.append("image", capturedBlob, safeName(capturedEmail) + ".jpg");
-    fd.append("email", capturedEmail);
-    try {
-      const r = await fetch("/api/banana", { method: "POST", body: fd });
-      if (!r.ok) {
-        const ctype = r.headers.get("content-type") || "";
-        let msg = `HTTP ${r.status}`;
-        if (ctype.includes("application/json")) {
-          try { const j = await r.json(); msg = j.error || j.message || msg; } catch(_) {}
-        } else {
-          if (r.status === 504 || r.status === 408) msg = "The portrait took too long to generate. Please try again.";
-          else if (r.status === 502 || r.status === 503) msg = "The image service is busy. Please try again in a moment.";
-          else if (r.status >= 500) msg = "Something went wrong on our end. Please try again.";
-        }
-        throw new Error(msg);
+  // Capture a frame to a JPEG blob and return it. Camera stays live.
+  function captureFrame(){
+    return new Promise((resolve, reject) => {
+      if (!cam.videoWidth || !cam.videoHeight){
+        return reject(new Error("Camera is not ready yet. Wait a moment and try again."));
       }
-      const blob = await r.blob();
-      generatedBlob = blob;
-      generatedMime = blob.type || "image/png";
-      resModalImg.src = URL.createObjectURL(blob);
-      resModalStat.textContent = "";
-      resModalSend.disabled = false;
-      resModalSend.textContent = "📩 Send to my email";
-      // Pop the result modal on top of whatever tab they’re on
-      openResModal();
-    } catch (e) {
-      showErr(`Failed: ${e.message}`);
-      // Send them back to the booth to see the error
-      activateTab("booth");
-    } finally {
-      showGenPill(false);
-    }
+      canvas.width = cam.videoWidth;
+      canvas.height = cam.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(cam, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        if (!blob) return reject(new Error("Capture failed."));
+        resolve(blob);
+      }, "image/jpeg", 0.95);
+    });
   }
 
+  // Compress the source for sending in the email payload (keeps payload < 250kB)
   async function compress(blob){
     const img = await createImageBitmap(blob);
     const c = document.createElement("canvas");
@@ -394,45 +331,141 @@ const booth = (() => {
     return { b64, mimeType: "image/jpeg" };
   }
 
-  async function sendEmail(){
-    if (!generatedBlob)              { resModalStat.textContent = "Generate a portrait first."; return; }
-    if (!isValidEmail(capturedEmail)){ resModalStat.textContent = "No valid email saved.";      return; }
-    resModalStat.textContent = "Sending…";
-    resModalSend.disabled = true;
+  // Per-job: kick off banana, wait for the user's email to arrive (set later),
+  // then ship the resulting portrait via /api/send-photo and toast the user.
+  async function processJob(job){
+    // Step 1: generate (does not require email)
+    job.status = "generating";
+    renderQueue();
+    let generatedBlob;
+    try {
+      const fd = new FormData();
+      fd.append("image", job.blob, `job-${job.id}.jpg`);
+      // Fire generation now — email may arrive later. Server tolerates blank email.
+      const r = await fetch("/api/banana", { method: "POST", body: fd });
+      if (!r.ok) {
+        const ctype = r.headers.get("content-type") || "";
+        let msg = `HTTP ${r.status}`;
+        if (ctype.includes("application/json")) {
+          try { const j = await r.json(); msg = j.error || j.message || msg; } catch(_) {}
+        } else if (r.status === 504 || r.status === 408) msg = "The portrait took too long to generate.";
+        else if (r.status === 502 || r.status === 503) msg = "The image service is busy.";
+        else if (r.status >= 500) msg = "Something went wrong generating the portrait.";
+        throw new Error(msg);
+      }
+      generatedBlob = await r.blob();
+      job.generatedBlob = generatedBlob;
+    } catch (e) {
+      job.status = "error";
+      jobs.delete(job.id);
+      renderQueue();
+      toast(`⚠️ Portrait generation failed${job.email ? ` for ${job.email}` : ""}: ${e.message}`, { kind: "error", duration: 8000 });
+      return;
+    }
+
+    // Step 2: wait for the user's email if it isn't here yet
+    if (!isValidEmail(job.email)) {
+      job.status = "awaiting-email";
+      renderQueue();
+      try { await job.emailPromise; } catch (_) { /* cancelled */ }
+      // Job may have been cancelled while waiting for email
+      if (job.status === "cancelled") { jobs.delete(job.id); renderQueue(); return; }
+    }
+
+    if (!isValidEmail(job.email)) {
+      // Cancelled or no email — nothing to send
+      jobs.delete(job.id); renderQueue();
+      return;
+    }
+
+    // Step 3: ship to email
+    job.status = "sending";
+    renderQueue();
     try {
       const { b64, mimeType } = await compress(generatedBlob);
       const r = await fetch("/api/send-photo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: capturedEmail,
-          filename: safeName(capturedEmail) + "-mxu-f1-miami.jpg",
-          mimeType: mimeType || generatedMime || "image/jpeg",
+          email: job.email,
+          filename: safeName(job.email) + "-mxu-f1-miami.jpg",
+          mimeType: mimeType || "image/jpeg",
           imageBase64: b64,
         }),
       });
       if (!r.ok) throw new Error(await r.text() || `HTTP ${r.status}`);
-      resModalStat.textContent = "✅ Sent. Returning in 30s…";
-      resModalSend.textContent = "✅ Sent";
-      // After Send, hold the result on screen 30 more seconds, then return to camera
-      if (resAutoCloseTimer) clearTimeout(resAutoCloseTimer);
-      resAutoCloseTimer = setTimeout(() => closeResModal(), 30000);
+      toast(`✅ <strong>F1 portrait sent!</strong><br><span class="toast__sub">${escapeHtml(job.email)}</span>`, { kind: "success", duration: 7000 });
     } catch (e) {
-      resModalStat.textContent = `Send failed: ${e.message}`;
-      resModalSend.disabled = false;
+      toast(`⚠️ Couldn't email ${escapeHtml(job.email)}: ${escapeHtml(e.message)}`, { kind: "error", duration: 9000 });
+    } finally {
+      job.status = "done";
+      jobs.delete(job.id);
+      renderQueue();
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  // Guards against a second Take Photo press while a countdown is running
+  let captureLock = false;
+
+  async function captureFlow(){
+    if (captureLock) return;
+    captureLock = true;
+    clearErr();
+    try {
+      // 1. Countdown + flash + capture (camera stays live for next person)
+      await runCountdown(5);
+      flash();
+      const blob = await captureFrame();
+
+      // 2. Create job + start generation IMMEDIATELY
+      const id = nextJobId++;
+      let resolveEmail; const emailPromise = new Promise(res => { resolveEmail = res; });
+      const job = {
+        id,
+        blob,
+        email: "",
+        status: "queued",
+        emailPromise,
+        resolveEmail,
+      };
+      jobs.set(id, job);
+      // Kick off generation in the background — do NOT await
+      processJob(job);
+      renderQueue();
+
+      // 3. Ask for email AFTER capture, while generation is in flight
+      const email = await emailModal.open();
+      if (email && isValidEmail(email.trim())) {
+        job.email = email.trim();
+        job.resolveEmail();
+      } else {
+        // Cancelled — mark cancelled so processJob will discard it after gen completes
+        job.status = "cancelled";
+        job.resolveEmail();
+        renderQueue();
+      }
+
+      // 4. If email captured, switch to Fast Lap so the user can play while waiting
+      if (job.email) {
+        toast(`🏁 <strong>Play Fast Lap while you wait!</strong><br><span class="toast__sub">Portrait will email to ${escapeHtml(job.email)}</span>`, { kind: "info", duration: 6000 });
+        activateTab("fastlap");
+      }
+    } catch (e) {
+      showErr(e.message || "Capture failed.");
+    } finally {
+      captureLock = false;
     }
   }
 
   startCamBtn.addEventListener("click",  () => start(false));
   if (switchBtn) switchBtn.addEventListener("click", () => { facing = facing === "user" ? "environment" : "user"; start(false); });
-  captureBtn .addEventListener("click",  captureFlow);
-  retakeBtn  .addEventListener("click",  retake);
-  generateBtn.addEventListener("click",  generate);
-  resModalSend.addEventListener("click", sendEmail);
-  // Tap on backdrop dismisses the modal (panel itself doesn't propagate)
-  resModal.addEventListener("click", (e) => {
-    if (e.target === resModal) closeResModal();
-  });
+  captureBtn.addEventListener("click", captureFlow);
 
   return {
     onShow: () => { if (navigator.mediaDevices?.getUserMedia) start(); },

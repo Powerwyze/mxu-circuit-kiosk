@@ -143,10 +143,10 @@
 
         <div class="booth__how booth__how--top">
           <ol>
-            <li>Tap <strong>Take Photo</strong> and enter your email</li>
-            <li>5-second countdown · capture portrait</li>
-            <li>Tap <strong>Generate</strong> · AI restyles you as an F1 driver</li>
-            <li>Tap <strong>Send to my email</strong> — souvenir delivered</li>
+            <li>Tap <strong>Take Photo</strong> · 5-sec countdown</li>
+            <li>Drop your <strong>email</strong> while we generate</li>
+            <li>Play <strong>Fast Lap</strong> · ~60 sec wait</li>
+            <li>F1 portrait <strong>auto-sent</strong> · next person can shoot</li>
           </ol>
         </div>
 
@@ -176,8 +176,13 @@
 
           <div class="booth__err"     id="boothErr"></div>
 
+          <!-- In-flight job counter (shown when one or more portraits are generating in background) -->
+          <div class="booth__queue" id="boothQueue" aria-hidden="true" role="status"></div>
         </div>
       </section>
+
+      <!-- Toast notifications (multi-person delivery confirmations) -->
+      <div class="toaster" id="toaster" aria-live="polite" aria-atomic="false"></div>
 
       <!-- Floating “generating” pill shown while user plays Fast Lap -->
       <div class="genpill" id="genPill" aria-hidden="true" role="status">
@@ -199,8 +204,8 @@
       <!-- ░░ Email modal (replaces prompt) ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
       <div class="modal" id="emailModal" aria-hidden="true" role="dialog" aria-labelledby="emailModalTitle">
         <div class="modal__panel">
-          <div class="modal__title" id="emailModalTitle">Your email</div>
-          <div class="modal__sub">We'll send your F1 portrait here once it's ready.</div>
+          <div class="modal__title" id="emailModalTitle">📸 Snap! Your portrait is generating</div>
+          <div class="modal__sub">Drop your email — we'll send your F1 portrait the second it's ready (~60 sec). Then go play Fast Lap while you wait.</div>
           <input class="modal__input" id="emailModalInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
           <div class="modal__err" id="emailModalErr"></div>
           <div class="modal__row">
