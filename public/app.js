@@ -157,7 +157,6 @@ const emailModal = (() => {
 const booth = (() => {
   const cam        = $("#boothCam");
   const canvas     = $("#boothCanvas");
-  const startCamBtn= $("#boothStart");
   const switchBtn  = $("#boothSwitch");
   const captureBtn = $("#boothCapture");
   const countdown  = $("#boothCountdown");
@@ -272,7 +271,7 @@ const booth = (() => {
       show(cam);
     } catch (e) {
       if (autoFlip) { facing = facing === "user" ? "environment" : "user"; return start(false); }
-      showErr(`Camera unavailable. Tap Switch then Start Camera. (${e.message})`);
+      showErr(`Camera unavailable. (${e.message})`);
     }
   }
 
@@ -463,7 +462,6 @@ const booth = (() => {
     }
   }
 
-  startCamBtn.addEventListener("click",  () => start(false));
   if (switchBtn) switchBtn.addEventListener("click", () => { facing = facing === "user" ? "environment" : "user"; start(false); });
   captureBtn.addEventListener("click", captureFlow);
 
