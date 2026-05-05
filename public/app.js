@@ -164,8 +164,21 @@ const booth = (() => {
   // Floating pill shown during generation (mirrors job queue state)
   const genPill    = $("#genPill");
 
-  // Legacy elements kept hidden — still in DOM but unused in the multi-person flow
-  // (preview, retake/generate buttons, result modal, email pill)
+  // Result modal (shown briefly when each portrait finishes generating)
+  const resModal       = $("#resModal");
+  const resModalImg    = $("#resModalImg");
+  const resModalTitle  = $("#resModalTitle");
+  const resModalStatus = $("#resModalStatus");
+  const resModalCta    = $("#resModalCta");
+  const resModalTimer  = $("#resModalTimer");
+
+  // Per-modal-session timers
+  let resAutoCloseTimer = null;
+  let resCountdownTimer = null;
+  // Pending results that completed while the modal was already open (FIFO)
+  const pendingResults = [];
+
+  const RESULT_HOLD_MS = 15000;
 
   function showGenPill(on) {
     if (!genPill) return;
@@ -394,8 +407,12 @@ const booth = (() => {
       });
       if (!r.ok) throw new Error(await r.text() || `HTTP ${r.status}`);
       toast(`✅ <strong>F1 portrait sent!</strong><br><span class="toast__sub">${escapeHtml(job.email)}</span>`, { kind: "success", duration: 7000 });
+      // Pop the result modal so the user (and the people around them) can see it
+      showResult({ blob: generatedBlob, email: job.email, sent: true });
     } catch (e) {
       toast(`⚠️ Couldn't email ${escapeHtml(job.email)}: ${escapeHtml(e.message)}`, { kind: "error", duration: 9000 });
+      // Still show them their portrait even if delivery failed
+      showResult({ blob: generatedBlob, email: job.email, sent: false });
     } finally {
       job.status = "done";
       jobs.delete(job.id);
@@ -407,6 +424,57 @@ const booth = (() => {
     return String(s).replace(/[&<>"']/g, c => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[c]));
+  }
+
+  // ─── Result modal: show the generated portrait briefly with auto-dismiss ───
+  function clearResTimers(){
+    if (resAutoCloseTimer) { clearTimeout(resAutoCloseTimer); resAutoCloseTimer = null; }
+    if (resCountdownTimer) { clearInterval(resCountdownTimer); resCountdownTimer = null; }
+  }
+
+  function closeResModal(){
+    resModal.classList.remove("is-open");
+    resModal.setAttribute("aria-hidden", "true");
+    clearResTimers();
+    // If another result is queued, show it next
+    if (pendingResults.length) {
+      const next = pendingResults.shift();
+      // small gap so the close-then-open feels intentional
+      setTimeout(() => showResult(next), 250);
+    }
+  }
+
+  function showResult({ blob, email, sent }){
+    // If a modal is already open, queue this result to show after
+    if (resModal.classList.contains("is-open")) {
+      pendingResults.push({ blob, email, sent });
+      return;
+    }
+
+    resModalImg.src = URL.createObjectURL(blob);
+    if (sent) {
+      resModalStatus.textContent = `✅ Sent to ${email}`;
+      resModalStatus.classList.remove("is-error");
+    } else {
+      resModalStatus.textContent = email
+        ? `⚠️ Couldn't email ${email}`
+        : `⚠️ Email skipped`;
+      resModalStatus.classList.add("is-error");
+    }
+    resModalCta.innerHTML = `Post on Instagram and tag <strong>@powerwyze</strong>`;
+
+    // Countdown text
+    let secs = Math.ceil(RESULT_HOLD_MS / 1000);
+    resModalTimer.textContent = String(secs);
+    resCountdownTimer = setInterval(() => {
+      secs -= 1;
+      if (secs <= 0) { clearInterval(resCountdownTimer); resCountdownTimer = null; return; }
+      resModalTimer.textContent = String(secs);
+    }, 1000);
+
+    resModal.classList.add("is-open");
+    resModal.setAttribute("aria-hidden", "false");
+    resAutoCloseTimer = setTimeout(closeResModal, RESULT_HOLD_MS);
   }
 
   // Guards against a second Take Photo press while a countdown is running
@@ -464,6 +532,8 @@ const booth = (() => {
 
   if (switchBtn) switchBtn.addEventListener("click", () => { facing = facing === "user" ? "environment" : "user"; start(false); });
   captureBtn.addEventListener("click", captureFlow);
+  // Tap anywhere on the result modal backdrop to dismiss early
+  resModal.addEventListener("click", () => closeResModal());
 
   return {
     onShow: () => { if (navigator.mediaDevices?.getUserMedia) start(); },

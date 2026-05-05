@@ -1855,6 +1855,28 @@ body {
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+.resmodal__status.is-error { color: #ffb84d; }
+.resmodal__cta {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: #ff6b6b;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid rgba(225, 6, 0, 0.4);
+  background: rgba(225, 6, 0, 0.08);
+  line-height: 1.35;
+}
+.resmodal__cta strong { color: #fff; font-weight: 700; }
+.resmodal__timer {
+  display: inline-block;
+  min-width: 1.4em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  font-weight: 700;
+}
 
 /* ───────── Toast notifications (multi-person delivery confirmations) ───────── */
 .toaster {
